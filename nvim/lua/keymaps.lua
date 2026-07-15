@@ -11,9 +11,8 @@ map("n", "<C-l>", "<C-w>l")
 map("n", "<leader>h", ":nohlsearch<CR>", { silent = true })
 
 -- yazi
--- map("n", "<leader>e", "<cmd>Yazi<CR>", { desc = "Open Yazi" })
--- map("n", "<leader>E", "<cmd>Yazi cwd<CR>", { desc = "Open Yazi in cwd" })
-map("n", "<leader>e", "<cmd>Lf<CR>", { desc = "Open lf" })
+map("n", "<leader>e", "<cmd>Yazi<CR>", { desc = "Open Yazi" })
+map("n", "<leader>E", "<cmd>Yazi cwd<CR>", { desc = "Open Yazi in cwd" })
 
 
 -- Lazygit

@@ -33,13 +33,13 @@ require("lazy").setup({
 	-- },
 
 	-- yazi
-	-- {
-	-- 	"mikavilpas/yazi.nvim",
-	-- 	event = "VeryLazy",
-	-- 	opts = {
-	-- 		open_for_directories = true,
-	-- 	},
-	-- },
+	{
+		"mikavilpas/yazi.nvim",
+		event = "VeryLazy",
+		opts = {
+			open_for_directories = true,
+		},
+	},
 
 	-- Lazygit
 	{
@@ -65,16 +65,12 @@ require("lazy").setup({
 	},
 
 	-- lf file manager
-	{
-		"ptzz/lf.vim",
-		dependencies = {
-			"voldikss/vim-floaterm",
-		},
-		config = function()
-			vim.g.lf_command_override = "lf -command 'map <enter> open'"
-			vim.g.floaterm_opener = "edit"
-		end,
-	},
+	-- {
+	-- 	"ptzz/lf.vim",
+	-- 	dependencies = {
+	-- 		"voldikss/vim-floaterm",
+	-- 	},
+	-- },
 
 	-- statusline
 	{
