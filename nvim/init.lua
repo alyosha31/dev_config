@@ -1,3 +1,9 @@
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
+vim.opt.termguicolors = true
+vim.o.background = "dark"
+
+
 require("vim-options")
 require("keymaps")
 
@@ -120,3 +126,5 @@ vim.api.nvim_create_autocmd("FileType", {
     jdtls.start_or_attach(config)
   end,
 })
+
+require("config.autocmds")
