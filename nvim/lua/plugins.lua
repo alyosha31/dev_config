@@ -61,8 +61,19 @@ require("lazy").setup({
 		"nvim-telescope/telescope.nvim",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
-			"nvim-telescope/telescope-file-browser.nvim",
 		},
+	},
+
+	-- lf file manager
+	{
+		"ptzz/lf.vim",
+		dependencies = {
+			"voldikss/vim-floaterm",
+		},
+		config = function()
+			vim.g.lf_command_override = "lf -command 'map <enter> open'"
+			vim.g.floaterm_opener = "edit"
+		end,
 	},
 
 	-- statusline
@@ -238,7 +249,6 @@ require("telescope").setup({
 		winblend = 0,
 	},
 })
-require("telescope").load_extension("file_browser")
 
 require("mason").setup()
 
