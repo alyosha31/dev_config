@@ -18,6 +18,30 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+vim.api.nvim_create_user_command("Trouble", function()
+  local enabled = vim.b.diagnostics_enabled ~= false
+  vim.diagnostic.enable(not enabled, { bufnr = 0 })
+  vim.b.diagnostics_enabled = not enabled
+  vim.notify("Diagnostics " .. (not enabled and "enabled" or "hidden"))
+end, { desc = "Toggle diagnostics for the current buffer" })
+
+-- Keep C/C++ diagnostics available without displaying visual noise.
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "*",
+  callback = function()
+    local quiet = vim.bo.filetype == "c" or vim.bo.filetype == "cpp"
+    if vim.b.diagnostics_enabled == nil then
+      vim.b.diagnostics_enabled = false
+      vim.diagnostic.enable(false, { bufnr = 0 })
+    end
+    vim.diagnostic.config({
+      virtual_text = quiet and false or true,
+      signs = quiet and false or true,
+      underline = quiet and false or true,
+    })
+  end,
+})
+
 
 -- bootstrap lazy first
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
