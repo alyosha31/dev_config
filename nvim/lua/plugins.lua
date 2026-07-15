@@ -33,13 +33,13 @@ require("lazy").setup({
 	-- },
 
 	-- yazi
-	{
-		"mikavilpas/yazi.nvim",
-		event = "VeryLazy",
-		opts = {
-			open_for_directories = true,
-		},
-	},
+	-- {
+	-- 	"mikavilpas/yazi.nvim",
+	-- 	event = "VeryLazy",
+	-- 	opts = {
+	-- 		open_for_directories = true,
+	-- 	},
+	-- },
 
 	-- Lazygit
 	{
@@ -61,6 +61,7 @@ require("lazy").setup({
 		"nvim-telescope/telescope.nvim",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
+			"nvim-telescope/telescope-file-browser.nvim",
 		},
 	},
 
@@ -237,6 +238,7 @@ require("telescope").setup({
 		winblend = 0,
 	},
 })
+require("telescope").load_extension("file_browser")
 
 require("mason").setup()
 
