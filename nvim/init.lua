@@ -3,6 +3,12 @@ vim.g.maplocalleader = " "
 vim.opt.termguicolors = true
 vim.o.background = "dark"
 
+vim.filetype.add({
+  extension = {
+    h = "c",
+  },
+})
+
 
 require("vim-options")
 require("keymaps")
