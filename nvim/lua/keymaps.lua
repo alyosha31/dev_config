@@ -3,6 +3,9 @@
 -- =========================================
 local map = vim.keymap.set
 
+-- macOS terminals send Option+Delete as Meta+Backspace.
+map("i", "<M-BS>", "<C-w>", { desc = "Delete previous word" })
+
 map("n", "<C-k>", "<C-w>k")
 map("n", "<C-j>", "<C-w>j")
 map("n", "<C-h>", "<C-w>h")

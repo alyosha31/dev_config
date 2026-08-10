@@ -13,9 +13,10 @@
   "neoscroll.nvim": { "branch": "master", "commit": "c8d29979cb0cb3a2437a8e0ae683fd82f340d3b8" },
   "nvim-jdtls": { "branch": "master", "commit": "6e9d953f0b82bccdb834cfde0e893f3119c22592" },
   "nvim-lspconfig": { "branch": "master", "commit": "d5b6e3db4c17b0146f63a2fc47e2027a754b2cb1" },
-  "nvim-treesitter": { "branch": "master", "commit": "cf12346a3414fa1b06af75c79faebe7f76df080a" },
+  "nvim-treesitter": { "branch": "main", "commit": "cf12346a3414fa1b06af75c79faebe7f76df080a" },
   "nvim-web-devicons": { "branch": "master", "commit": "0ca28b61a04fe7426cefbdd52c2647ef0e335b5f" },
   "plenary.nvim": { "branch": "master", "commit": "74b06c6c75e4eeb3108ec01852001636d85a932b" },
   "telescope.nvim": { "branch": "master", "commit": "427b576c16792edad01a92b89721d923c19ad60f" },
+  "treesitter-parser-registry": { "branch": "main", "commit": "6eb15358bb9fc88f0d3401d8538d56652e9bdf3c" },
   "yazi.nvim": { "branch": "main", "commit": "3a5187b93d6f9fa1287ad63571df53e31a5c26bb" }
 }
