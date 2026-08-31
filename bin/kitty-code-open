@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+set -u
+
+path=${1:-}
+line=${2:-1}
+
+# Kitty's linenum matcher normally provides a plain filesystem path, but also
+# tolerate file:// references and the common ./ prefix.
+path=${path#file://}
+path=${path#./}
+
+if [[ ! $line =~ ^[0-9]+$ ]]; then
+    line=1
+fi
+
+resolved=""
+
+use_if_file() {
+    if [[ -f $1 ]]; then
+        file_dir=${1%/*}
+        file_name=${1##*/}
+        if [[ $file_dir == "$1" ]]; then
+            file_dir=.
+        fi
+        resolved="$(cd "$file_dir" && pwd -P)/$file_name"
+        return 0
+    fi
+    return 1
+}
+
+# First prefer the exact path relative to the source terminal's directory.
+use_if_file "$path" || true
+
+git_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [[ -z $resolved && -n $git_root ]]; then
+    use_if_file "$git_root/$path" || true
+
+    # Agents sometimes include the repository directory in their references,
+    # even when the terminal is already somewhere inside that repository.
+    repo_name=${git_root##*/}
+    if [[ $path == "$repo_name/"* ]]; then
+        use_if_file "$git_root/${path#*/}" || true
+    fi
+fi
+
+# A new terminal tab can occasionally start above the project directory. Search
+# the normal source-code roots by the complete emitted suffix in that case.
+if [[ -z $resolved ]]; then
+    for search_root in /Users/mg/Development /Users/mg/projects; do
+        [[ -d $search_root ]] || continue
+        candidate=$(/usr/bin/find "$search_root" -type d -name .git -prune -o -type f -path "*/$path" -print -quit 2>/dev/null)
+        if [[ -n $candidate ]]; then
+            resolved=$candidate
+            break
+        fi
+    done
+fi
+
+if [[ -z $resolved ]]; then
+    printf 'Could not resolve code reference:\n  %s:%s\n\nStarted from:\n  %s\n\nPress Enter to close this tab.\n' "$path" "$line" "$PWD"
+    read -r
+    exit 1
+fi
+
+resolved_dir=${resolved%/*}
+project_root=$(git -C "$resolved_dir" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$resolved_dir")
+cd "$project_root" || exit 1
+editor=${KITTY_CODE_EDITOR:-nvim}
+exec "$editor" "+$line" -- "$resolved"
