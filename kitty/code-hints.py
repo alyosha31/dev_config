@@ -1,8 +1,16 @@
 import re
 
 
+CODE_EXTENSION = (
+    r"py|pyi|js|jsx|ts|tsx|mjs|cjs|c|h|cc|cpp|cxx|hh|hpp|go|rs|java|"
+    r"kt|kts|swift|rb|php|cs|lua|sh|bash|zsh|fish|vim|sql|html|htm|"
+    r"css|scss|sass|less|vue|svelte|md|markdown|txt|json|jsonc|yaml|"
+    r"yml|toml|xml|ini|cfg|conf|proto|graphql|gql|ex|exs|erl|hrl|"
+    r"clj|cljs|scala|dart|r|hs|zig|sol|tf|hcl"
+)
+
 REFERENCE = re.compile(
-    r"(?P<path>[A-Za-z0-9_./-]+\.[A-Za-z0-9]{1,10})"
+    rf"(?P<path>[A-Za-z0-9_./-]+\.(?:{CODE_EXTENSION}))(?![A-Za-z0-9_])"
     r"(?:(?::|\s+around\s+line\s+)(?P<line>[0-9]+)(?:-[0-9]+)?)?"
 )
 
