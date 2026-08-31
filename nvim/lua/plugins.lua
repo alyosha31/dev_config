@@ -85,6 +85,12 @@ require("lazy").setup({
 		"karb94/neoscroll.nvim",
 	},
 
+	-- markdown preview
+	{
+		"OXY2DEV/markview.nvim",
+		lazy = false,
+	},
+
 	-- git signs
 	{
 		"lewis6991/gitsigns.nvim",
@@ -138,6 +144,7 @@ require("lazy").setup({
 				"json",
 				"yaml",
 				"markdown",
+				"markdown_inline",
 				"python",
 				"javascript",
 				"typescript",
