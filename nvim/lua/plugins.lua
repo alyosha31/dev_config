@@ -153,9 +153,7 @@ require("lazy").setup({
 				"cpp",
 			}
 
-			require("nvim-treesitter.configs").setup({
-				ensure_installed = languages,
-			})
+			require("nvim-treesitter").install(languages)
 			vim.api.nvim_create_autocmd("FileType", {
 				pattern = languages,
 				callback = function()
