@@ -95,6 +95,13 @@ require("lazy").setup({
 	{
 		"lewis6991/gitsigns.nvim",
 	},
+	{
+		"FabijanZulj/blame.nvim",
+		lazy = false,
+		config = function()
+			require("blame").setup({})
+		end,
+	},
 
 	-- autopairs
 	{
