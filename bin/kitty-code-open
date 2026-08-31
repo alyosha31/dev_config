@@ -2,8 +2,24 @@
 
 set -u
 
-path=${1:-}
-line=${2:-1}
+path=""
+line=1
+
+# Kitty regex hints pass named captures as key=value arguments. Retain support
+# for positional arguments so the helper remains convenient from the shell.
+for argument in "$@"; do
+    case $argument in
+        path=*) path=${argument#path=} ;;
+        line=*) line=${argument#line=} ;;
+        *)
+            if [[ -z $path ]]; then
+                path=$argument
+            elif [[ $line == 1 ]]; then
+                line=$argument
+            fi
+            ;;
+    esac
+done
 
 # Kitty's linenum matcher normally provides a plain filesystem path, but also
 # tolerate file:// references and the common ./ prefix.
