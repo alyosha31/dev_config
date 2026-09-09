@@ -19,14 +19,61 @@ map("n", "<leader>E", "<cmd>Yazi cwd<CR>", { desc = "Open Yazi in cwd" })
 
 
 -- git
+-- Diff/history entry points (<leader>gd/gl/gh/gm/gc/gq) live in plugins/diffview.lua.
+map("n", "<leader>g?", "<cmd>GitKeys<CR>", { desc = "Git keymap cheatsheet" })
 map("n", "<leader>gg", "<cmd>Git<CR>", { desc = "Git status" })
+map("n", "<leader>gL", "<cmd>Git log --oneline --graph --decorate<CR>", { desc = "Git log graph" })
 map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview Git hunk" })
 map("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<CR>", { desc = "Reset Git hunk" })
 map("n", "<leader>gs", "<cmd>Gitsigns stage_hunk<CR>", { desc = "Stage Git hunk" })
+map("n", "<leader>gS", "<cmd>Gitsigns stage_buffer<CR>", { desc = "Stage whole file" })
+map("n", "<leader>gu", "<cmd>Gitsigns undo_stage_hunk<CR>", { desc = "Undo last hunk stage" })
 map("n", "<leader>gt", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "Toggle Git line blame" })
+map("n", "<leader>gw", "<cmd>Gitsigns toggle_word_diff<CR>", { desc = "Toggle word diff" })
+map("n", "<leader>gQ", "<cmd>Gitsigns setqflist all<CR>", { desc = "All repo hunks to quickfix" })
 map("n", "<leader>gb", function()
   require("gitsigns").blame_line({ full = true })
 end, { desc = "Show Git line blame" })
+
+-- Stage / reset just the selected lines.
+map("v", "<leader>gs", function()
+  require("gitsigns").stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end, { desc = "Stage selected lines" })
+map("v", "<leader>gr", function()
+  require("gitsigns").reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end, { desc = "Reset selected lines" })
+
+-- Hunk as a text object: dih, yah, vih ...
+map({ "o", "x" }, "ih", "<cmd>Gitsigns select_hunk<CR>", { desc = "Inside hunk" })
+map({ "o", "x" }, "ah", "<cmd>Gitsigns select_hunk<CR>", { desc = "Around hunk" })
+
+-- Same hunk motions as inside a diffview, so ]h/[h works everywhere.
+map("n", "]h", "<cmd>Gitsigns nav_hunk next<CR>", { desc = "Next Git hunk" })
+map("n", "[h", "<cmd>Gitsigns nav_hunk prev<CR>", { desc = "Previous Git hunk" })
+
+-- Review a commit or a whole branch inside the real files: point gitsigns at
+-- another revision and its changes show as signs in the buffer on disk, where
+-- gd/gr and treesitter still work. Empty input resets to the index.
+map("n", "<leader>gB", function()
+  local gs = require("gitsigns")
+
+  vim.ui.input({
+    prompt = "Gitsigns diff base (empty resets to index): ",
+    default = require("util.git").base_rev() or "HEAD~1",
+  }, function(rev)
+    if rev == nil then
+      return
+    end
+
+    if rev == "" then
+      gs.change_base(nil, true)
+      vim.notify("gitsigns base: index")
+    else
+      gs.change_base(rev, true)
+      vim.notify("gitsigns base: " .. rev)
+    end
+  end)
+end, { desc = "Set gitsigns diff base" })
 
 local function git_revision_file(command, prompt)
   vim.ui.input({ prompt = prompt }, function(revision)
