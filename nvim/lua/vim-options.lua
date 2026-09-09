@@ -20,7 +20,10 @@ vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
 vim.opt.signcolumn = "yes"
 vim.opt.updatetime = 200
-vim.opt.timeoutlen = 300
+-- Long enough to reach for shift mid-chord: <leader>gB and friends were
+-- timing out at 300ms and falling through as literal keys. Terminal escape
+-- sequences use ttimeoutlen (50ms), so this costs nothing there.
+vim.opt.timeoutlen = 800
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.splitright = true
