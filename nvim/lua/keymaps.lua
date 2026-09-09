@@ -51,6 +51,35 @@ map({ "o", "x" }, "ah", "<cmd>Gitsigns select_hunk<CR>", { desc = "Around hunk" 
 map("n", "]h", "<cmd>Gitsigns nav_hunk next<CR>", { desc = "Next Git hunk" })
 map("n", "[h", "<cmd>Gitsigns nav_hunk prev<CR>", { desc = "Previous Git hunk" })
 
+-- Draw the diff in the file itself: changed lines get a green background, the
+-- changed words within them a brighter green, and removed lines appear in
+-- place as red virtual lines. Compares against whatever base is set, falling
+-- back to the previous commit, and restores that base when toggled off.
+local inline_diff = { on = false, base = nil }
+
+map("n", "<leader>gi", function()
+  local gs = require("gitsigns")
+  local base = require("gitsigns.config").config.base
+
+  inline_diff.on = not inline_diff.on
+
+  if inline_diff.on then
+    inline_diff.base = base
+    gs.change_base(base or "HEAD~1", true)
+  else
+    gs.change_base(inline_diff.base, true)
+  end
+
+  gs.toggle_linehl(inline_diff.on)
+  gs.toggle_word_diff(inline_diff.on)
+  gs.toggle_deleted(inline_diff.on)
+
+  vim.notify("inline diff " .. (inline_diff.on and ("vs " .. (base or "HEAD~1")) or "off"))
+end, { desc = "Toggle inline diff in the file" })
+
+-- One hunk, inline, without turning the whole mode on.
+map("n", "<leader>gP", "<cmd>Gitsigns preview_hunk_inline<CR>", { desc = "Preview hunk inline" })
+
 -- Review a commit or a whole branch inside the real files: point gitsigns at
 -- another revision and its changes show as signs in the buffer on disk, where
 -- gd/gr and treesitter still work. Empty input resets to the index.

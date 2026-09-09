@@ -29,7 +29,9 @@ and treesitter are intact.
 | Key | Does |
 | --- | --- |
 | `]h` / `[h` | Next / previous hunk |
+| `<leader>gi` | **Inline diff in the file** — changed lines green, removed lines back in place in red. Toggles |
 | `<leader>gp` | Preview the hunk in a float |
+| `<leader>gP` | Preview one hunk inline, without turning the whole mode on |
 | `<leader>gs` | Stage the hunk — in visual mode, only the selected lines |
 | `<leader>gr` | Reset the hunk — in visual mode, only the selected lines |
 | `<leader>gS` | Stage the whole file |
@@ -44,6 +46,13 @@ and treesitter are intact.
 base) and the diff against it shows as signs across your real files. `]h`,
 `<leader>gp` and `<leader>gQ` then walk a whole branch's changes without ever
 opening a diff split. Empty input resets to the index.
+
+`<leader>gi` draws that diff in the buffer instead of the gutter: line
+backgrounds for what changed, brighter word-level highlights inside them, and
+the removed lines put back as red virtual lines where they used to be. With no
+base set it compares against `HEAD~1`; with one set by `<leader>gB` it follows
+that instead, and toggling off restores whatever base you had. It's a real
+buffer the whole time, so `gd`, `gr` and folds keep working.
 
 ## Diffview — file panel (left)
 

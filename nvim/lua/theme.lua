@@ -95,6 +95,11 @@ local highlights = {
 	GitSignsAddInline = { link = "GitDiffAddedText" },
 	GitSignsChangeInline = { link = "GitDiffAddedText" },
 	GitSignsDeleteInline = { link = "GitDiffRemovedText" },
+	-- Removed lines drawn inside the file as virtual lines. These fall back to
+	-- DiffDelete, which is the dim filler colour here, so they need saying.
+	GitSignsDeleteVirtLn = { link = "GitDiffRemoved" },
+	GitSignsDeleteVirtLnInLine = { link = "GitDiffRemovedText" },
+	GitSignsVirtLnum = { ctermfg = 8, ctermbg = 52 },
 }
 
 for group, opts in pairs(highlights) do
