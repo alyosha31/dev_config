@@ -67,20 +67,34 @@ local highlights = {
 	CursorLine = { ctermbg = 236 },
 	CursorLineNr = { ctermfg = 14, bold = true },
 
-	DiffAdd = { ctermfg = 15, ctermbg = 22 },
-	DiffChange = { ctermfg = 15, ctermbg = 22 },
-	DiffDelete = { ctermfg = 9, ctermbg = 52 },
-	DiffText = { ctermfg = 15, ctermbg = 28, bold = true },
+	-- Diffs: removals red, additions green. No foreground, so syntax
+	-- highlighting survives inside a changed line.
+	GitDiffRemoved = { ctermbg = 52 },
+	GitDiffRemovedText = { ctermbg = 88, bold = true },
+	GitDiffAdded = { ctermbg = 22 },
+	GitDiffAddedText = { ctermbg = 28, bold = true },
+	GitDiffFiller = { ctermfg = 8 },
+
+	-- Vim's diff mode is per-window: DiffAdd means "this line isn't in the
+	-- other buffer", so the one group paints removed lines on the left and
+	-- added lines on the right, and DiffChange paints both sides of a modified
+	-- line. Diffview windows get remapped per side to the groups above (see
+	-- plugins/diffview.lua); these are the fallback for plain :diffsplit and
+	-- fugitive, where a side-neutral colour for changes is the honest choice.
+	DiffAdd = { link = "GitDiffAdded" },
+	DiffChange = { ctermbg = 58 },
+	DiffText = { ctermbg = 100, bold = true },
+	DiffDelete = { link = "GitDiffFiller" },
 
 	GitSignsAdd = { ctermfg = 2 },
-	GitSignsChange = { ctermfg = 2 },
+	GitSignsChange = { ctermfg = 3 },
 	GitSignsDelete = { ctermfg = 9 },
-	GitSignsAddLn = { link = "DiffAdd" },
-	GitSignsChangeLn = { link = "DiffChange" },
-	GitSignsDeleteLn = { link = "DiffDelete" },
-	GitSignsAddInline = { link = "DiffText" },
-	GitSignsChangeInline = { link = "DiffText" },
-	GitSignsDeleteInline = { link = "DiffDelete" },
+	GitSignsAddLn = { link = "GitDiffAdded" },
+	GitSignsChangeLn = { link = "GitDiffAdded" },
+	GitSignsDeleteLn = { link = "GitDiffRemoved" },
+	GitSignsAddInline = { link = "GitDiffAddedText" },
+	GitSignsChangeInline = { link = "GitDiffAddedText" },
+	GitSignsDeleteInline = { link = "GitDiffRemovedText" },
 }
 
 for group, opts in pairs(highlights) do

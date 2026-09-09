@@ -149,12 +149,29 @@ return {
 					vim.opt_local.relativenumber = false
 					vim.opt_local.cursorline = true
 				end,
-				diff_buf_win_enter = function()
+				diff_buf_win_enter = function(_, winid, ctx)
 					-- `:diffthis` sets foldmethod=diff with foldlevel=0, which
 					-- collapses everything that didn't change — the diff ends up
 					-- showing hunks with no surrounding file. Open the folds so
 					-- each hunk sits in the whole file; zM collapses them back.
-					vim.opt_local.foldlevel = 99
+					vim.wo[winid].foldlevel = 99
+
+					-- Diff highlighting is per-window and side-blind: a line
+					-- missing from the other buffer is DiffAdd wherever it is, so
+					-- removals on the left come out green, and DiffChange paints
+					-- both sides of a modified line the same. Remap by side so
+					-- anything gone from the old file is red and anything new in
+					-- the new file is green.
+					if ctx.layout_name:match("^diff2") then
+						local old = ctx.symbol == "a"
+
+						vim.wo[winid].winhighlight = table.concat({
+							"DiffAdd:" .. (old and "GitDiffRemoved" or "GitDiffAdded"),
+							"DiffChange:" .. (old and "GitDiffRemoved" or "GitDiffAdded"),
+							"DiffText:" .. (old and "GitDiffRemovedText" or "GitDiffAddedText"),
+							"DiffDelete:GitDiffFiller",
+						}, ",")
+					end
 				end,
 			},
 			keymaps = {
