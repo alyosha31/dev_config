@@ -29,6 +29,9 @@ vim.opt.smartcase = true
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 vim.opt.cursorline = true
+-- lualine_a already shows the mode. Without this, Vim also draws its own
+-- "-- INSERT --" in the command line under the statusline.
+vim.opt.showmode = false
 vim.opt.clipboard = "unnamedplus"
 vim.opt.mouse = "a"
 vim.opt.swapfile = false
