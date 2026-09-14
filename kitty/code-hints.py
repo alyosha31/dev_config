@@ -47,7 +47,7 @@ def handle_result(args, data, target_window_id, boss, extra_cli_args, *unused):
                 "launch",
                 "--type=tab",
                 "--cwd=current",
-                "/Users/mg/dev_config/bin/kitty-code-open",
+                "/Users/alyosha/dev_config/bin/kitty-code-open",
                 f"path={reference['path']}",
                 f"line={reference['line']}",
             ),
