@@ -24,13 +24,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
-vim.api.nvim_create_user_command("Trouble", function()
-  local enabled = vim.b.diagnostics_enabled ~= false
-  vim.diagnostic.enable(not enabled, { bufnr = 0 })
-  vim.b.diagnostics_enabled = not enabled
-  vim.notify("Diagnostics " .. (not enabled and "enabled" or "hidden"))
-end, { desc = "Toggle diagnostics for the current buffer" })
-
 -- Hide inline diagnostics; use gl / [d / ]d to inspect them.
 vim.diagnostic.config({
   virtual_text = false,
