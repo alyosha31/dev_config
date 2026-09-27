@@ -181,11 +181,13 @@ require("lazy").setup({
 			},
 			completion = {
 				documentation = {
-					auto_show = true,
-					auto_show_delay_ms = 200,
+					auto_show = false,
 				},
 				menu = {
-					auto_show = true,
+					auto_show = false,
+				},
+				ghost_text = {
+					enabled = false,
 				},
 			},
 			sources = {
