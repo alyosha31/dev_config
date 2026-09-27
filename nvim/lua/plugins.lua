@@ -144,6 +144,8 @@ require("lazy").setup({
 				"java",
 				"c",
 				"cpp",
+				"rust",
+				"toml",
 			}
 
 			require("nvim-treesitter").install(languages)
@@ -251,6 +253,7 @@ require("conform").setup({
 		c = { "clang_format" },
 		cpp = { "clang_format" },
 		go = { "gofmt", "goimports" },
+		rust = { "rustfmt" },
 		python = { "ruff_format" },
 		javascript = { "prettier" },
 		typescript = { "prettier" },

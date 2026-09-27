@@ -105,6 +105,15 @@ vim.lsp.config("clangd", {})
 vim.lsp.config("gopls", {})
 vim.lsp.config("ts_ls", {})
 
+vim.lsp.config("rust_analyzer", {
+  settings = {
+    ["rust-analyzer"] = {
+      cargo = { allFeatures = true },
+      check = { command = "clippy" },
+    },
+  },
+})
+
 vim.lsp.config("lua_ls", {
   settings = {
     Lua = {
@@ -124,6 +133,7 @@ vim.lsp.enable({
   "gopls",
   "ts_ls",
   "lua_ls",
+  "rust_analyzer",
 })
 
 -- Java: start jdtls only for Java buffers
