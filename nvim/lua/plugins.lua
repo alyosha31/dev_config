@@ -1,4 +1,5 @@
 require("lazy").setup({
+	require("plugins.catppuccin"),
 	require("plugins.blink-cmp"),
 	require("plugins.conform"),
 	require("plugins.diffview"),

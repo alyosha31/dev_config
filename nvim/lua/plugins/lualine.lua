@@ -5,7 +5,7 @@ return {
 	},
 	opts = {
 		options = {
-			theme = "auto",
+			theme = "catppuccin",
 			-- lualine only redraws when one of these events fires; the
 			-- interval below is just a backstop. Its default event list
 			-- leaves out everything this statusline actually shows, so
