@@ -45,6 +45,31 @@ map("n", "<leader>gb", function()
   require("gitsigns").blame_line({ full = true })
 end, { desc = "Show Git line blame" })
 
+-- The two follow-ups to <leader>gb: review that commit here, or go read the
+-- discussion around it. Both work off the blame for the cursor line, so the
+-- float does not have to be open -- and on a line that already shows a hash
+-- (fugitive log/blame, diffview's log panel) they use that hash instead.
+map("n", "<leader>go", function()
+  local sha = require("util.git").commit_at_cursor()
+  if sha then
+    -- `^!` is "this commit against its parent", the same as <leader>gc.
+    vim.cmd("DiffviewOpen " .. sha .. "^!")
+  end
+end, { desc = "Open this line's commit in Diffview" })
+
+map("n", "<leader>gO", function()
+  local git = require("util.git")
+  local sha = git.commit_at_cursor()
+  if sha then
+    git.browse_commit(sha)
+  end
+end, { desc = "Open this line's PR on GitHub" })
+
+-- Blame the whole file in a side window, scrollbound to it. Unlike the float
+-- it is a real buffer you can move around in: `s`/`S`/`e` show the commit
+-- under the cursor, `r` reblames at it, `d` diffs it, `<CR>` lists the lot.
+map("n", "<leader>gA", "<cmd>Gitsigns blame<CR>", { desc = "Blame the whole file" })
+
 -- Stage / reset just the selected lines.
 map("v", "<leader>gs", function()
   require("gitsigns").stage_hunk({ vim.fn.line("."), vim.fn.line("v") })

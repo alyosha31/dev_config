@@ -36,7 +36,10 @@ and treesitter are intact.
 | `<leader>gr` | Reset the hunk — in visual mode, only the selected lines |
 | `<leader>gS` | Stage the whole file |
 | `<leader>gu` | Undo the last stage |
-| `<leader>gb` | Full blame for this line, in a float |
+| `<leader>gb` | Full blame for this line, in a float — sha and PR number are clickable |
+| `<leader>go` | Open the commit that touched this line in Diffview |
+| `<leader>gO` | Open that commit's PR on GitHub — the commit page if it had none |
+| `<leader>gA` | Blame the whole file in a side window |
 | `<leader>gt` | Toggle inline blame on every line |
 | `<leader>gw` | Toggle word-level diff highlighting |
 | `<leader>gQ` | Every hunk in the repo into the quickfix list |
@@ -53,6 +56,32 @@ the removed lines put back as red virtual lines where they used to be. With no
 base set it compares against `HEAD~1`; with one set by `<leader>gB` it follows
 that instead, and toggling off restores whatever base you had. It's a real
 buffer the whole time, so `gd`, `gr` and folds keep working.
+
+## Blame
+
+`<leader>gb` floats the full commit for the line: sha, PR number, author, the
+message and the hunk it came from. Press it again to step into the float,
+`q` to close it. With `gh` installed the sha and the `#1234` are real
+hyperlinks — cmd+click opens them in the browser.
+
+From the line itself, without the float: `<leader>go` opens that commit in
+Diffview, `<leader>gO` opens its PR on GitHub. Both blame the buffer as it is
+now, so unsaved edits don't throw the line off, and on any line that already
+shows a hash — fugitive's log or blame, diffview's log panel — they act on
+that hash instead.
+
+`q` closes what `<leader>go` opens — from the panel or either diff window, the
+whole tab at once. `<leader>gq` does the same from anywhere else.
+
+`<leader>gA` blames the whole file in a window scrollbound to it:
+
+| Key | Does |
+| --- | --- |
+| `<CR>` | Menu of everything below |
+| `s` / `S` / `e` | Show the commit under the cursor — vsplit / tab / this window |
+| `r` / `R` | Reblame from that commit / from its parent — walk back through rewrites |
+| `d` | Diff that commit in a new tab |
+| `q` | Close |
 
 ## Diffview — file panel (left)
 
@@ -166,9 +195,12 @@ and `]h`, stage from the panel with `-`, then `<leader>gg` and `cc`.
 **Commit part of a change.** Visual-select the lines and `<leader>gs`. Or
 `<leader>gg` then `I` for `git add -p`.
 
-**Why is this line here.** `<leader>gb` for the commit that touched it, then
-`<leader>gh` for that file's full history — or visual-select and `<leader>gh`
-to follow just those lines.
+**Why is this line here.** `<leader>gb` for the commit that touched it →
+`<leader>go` to read that commit in full → `<leader>gO` when the commit
+message isn't enough and you want the PR discussion. `<leader>gA` when the
+first commit is a rename or a reformat: `R` there reblames past it. Or
+`<leader>gh` for the file's whole history — visual-select first to follow just
+those lines.
 
 **Drop one hunk.** `<leader>gr` in the buffer, or `X` on an entry in the
 diffview panel to throw away the whole file's changes.
