@@ -25,14 +25,16 @@ return {
 		custom_highlights = function(C)
 			local blend = require("catppuccin.utils.colors").blend
 
-			-- Diffs: removals red, additions green, as the base tinted 20% for
-			-- the line and 30% for the changed words. No foreground, so syntax
-			-- highlighting survives inside a changed line, and the tints stay
-			-- dark enough that punctuation (overlay2) is still readable.
-			local added = blend(C.green, C.base, 0.20)
-			local added_text = blend(C.green, C.base, 0.30)
-			local removed = blend(C.red, C.base, 0.20)
-			local removed_text = blend(C.red, C.base, 0.30)
+			-- Diffs: removals red, additions green, as crust tinted 25% for the
+			-- line and 35% for the changed words. Crust rather than base: base is
+			-- blue-purple, and blending both colours into it pulled them to the
+			-- same muddy grey. No foreground, so syntax highlighting survives
+			-- inside a changed line, and the tints stay dark enough that
+			-- punctuation (overlay2) is still readable.
+			local added = blend(C.green, C.crust, 0.25)
+			local added_text = blend(C.green, C.crust, 0.35)
+			local removed = blend(C.red, C.crust, 0.25)
+			local removed_text = blend(C.red, C.crust, 0.35)
 
 			return {
 				-- Side-aware groups: plugins/diffview.lua remaps each window's
@@ -50,8 +52,8 @@ return {
 				-- plain :diffsplit and fugitive, where a side-neutral colour for
 				-- changes is the honest choice.
 				DiffAdd = { link = "GitDiffAdded" },
-				DiffChange = { bg = blend(C.yellow, C.base, 0.15) },
-				DiffText = { bg = blend(C.yellow, C.base, 0.30), bold = true },
+				DiffChange = { bg = blend(C.yellow, C.crust, 0.20) },
+				DiffText = { bg = blend(C.yellow, C.crust, 0.35), bold = true },
 				DiffDelete = { link = "GitDiffFiller" },
 
 				-- gitsigns' in-file diff (<leader>gi) in the same colours.
