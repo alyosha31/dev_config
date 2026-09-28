@@ -25,16 +25,22 @@ return {
 		custom_highlights = function(C)
 			local blend = require("catppuccin.utils.colors").blend
 
-			-- Diffs: removals red, additions green, as crust tinted 25% for the
-			-- line and 35% for the changed words. Crust rather than base: base is
+			-- Diffs: removals red, additions green, as crust tinted 30% for the
+			-- line and 42% for the changed words. Crust rather than base: base is
 			-- blue-purple, and blending both colours into it pulled them to the
-			-- same muddy grey. No foreground, so syntax highlighting survives
+			-- same muddy grey. Mocha's red is pinkish and its green pastel, so each
+			-- is mixed half and half with Latte's deeper one first, to read as
+			-- plainly red and green. No foreground, so syntax highlighting survives
 			-- inside a changed line, and the tints stay dark enough that
 			-- punctuation (overlay2) is still readable.
-			local added = blend(C.green, C.crust, 0.25)
-			local added_text = blend(C.green, C.crust, 0.35)
-			local removed = blend(C.red, C.crust, 0.25)
-			local removed_text = blend(C.red, C.crust, 0.35)
+			local latte = require("catppuccin.palettes").get_palette("latte")
+			local green = blend(C.green, latte.green, 0.5)
+			local red = blend(C.red, latte.red, 0.5)
+
+			local added = blend(green, C.crust, 0.30)
+			local added_text = blend(green, C.crust, 0.42)
+			local removed = blend(red, C.crust, 0.30)
+			local removed_text = blend(red, C.crust, 0.42)
 
 			return {
 				-- Side-aware groups: plugins/diffview.lua remaps each window's
