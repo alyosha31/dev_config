@@ -27,7 +27,9 @@ local highlights = {
 	PreProc = { ctermfg = 6 },
 	Type = { ctermfg = 6 },
 	Special = { ctermfg = 6 },
-	Delimiter = { ctermfg = 8 },
+	-- 15, not 8: color8 is barely lighter than the background, so on a diff
+	-- line's tinted background `:` and `.` vanished.
+	Delimiter = { ctermfg = 15 },
 	Todo = { ctermfg = 0, ctermbg = 11, bold = true },
 
 	["@variable"] = { ctermfg = 7 },
@@ -53,7 +55,7 @@ local highlights = {
 	["@property"] = { ctermfg = 14 },
 	["@attribute"] = { ctermfg = 3 },
 	["@operator"] = { link = "Operator" },
-	["@punctuation"] = { ctermfg = 8 },
+	["@punctuation"] = { link = "Delimiter" },
 	["@comment"] = { link = "Comment" },
 
 	DiagnosticError = { ctermfg = 9 },
@@ -68,7 +70,9 @@ local highlights = {
 	CursorLineNr = { ctermfg = 14, bold = true },
 
 	-- Diffs: removals red, additions green. No foreground, so syntax
-	-- highlighting survives inside a changed line.
+	-- highlighting survives inside a changed line. The actual colours of
+	-- 22/28/52/88 (and 58/100 below) are muted Catppuccin tints set in
+	-- kitty.conf, not the stock saturated palette.
 	GitDiffRemoved = { ctermbg = 52 },
 	GitDiffRemovedText = { ctermbg = 88, bold = true },
 	GitDiffAdded = { ctermbg = 22 },
