@@ -6,6 +6,16 @@ local map = vim.keymap.set
 -- macOS terminals send Option+Delete as Meta+Backspace.
 map("i", "<M-BS>", "<C-w>", { desc = "Delete previous word" })
 
+-- Kitty passes Cmd+C/V/X through to Neovim whenever the terminal has no mouse
+-- selection of its own. Neovim then drops the unmatched D- modifier and runs
+-- the bare key, so Cmd+C over a visual block ran `c` and deleted it. Bind the
+-- macOS clipboard keys to what they mean everywhere else.
+map({ "n", "v" }, "<D-c>", '"+y', { desc = "Copy to system clipboard" })
+map({ "n", "v" }, "<D-v>", '"+p', { desc = "Paste from system clipboard" })
+map("i", "<D-v>", "<C-r>+", { desc = "Paste from system clipboard" })
+map("c", "<D-v>", "<C-r>+", { desc = "Paste from system clipboard" })
+map("v", "<D-x>", '"+d', { desc = "Cut to system clipboard" })
+
 map("n", "<C-k>", "<C-w>k")
 map("n", "<C-j>", "<C-w>j")
 map("n", "<C-h>", "<C-w>h")
