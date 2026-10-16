@@ -21,8 +21,8 @@ case $state in
         [ -n "${TMUX_PANE:-}" ] && tmux set-option -w -u -t "$TMUX_PANE" @agent
         exit 0
         ;;
-    wait) flag='?' default_message="$agent needs your input" ;;
-    done) flag='✓' default_message="$agent finished" ;;
+    wait) flag=wait default_message="$agent needs your input" ;;
+    done) flag=done default_message="$agent finished" ;;
     *) exit 0 ;;
 esac
 
@@ -50,7 +50,10 @@ on_screen=0
 if [ -n "${TMUX_PANE:-}" ]; then
     session=$(tmux display-message -p -t "$TMUX_PANE" '#S')
     where=$(tmux display-message -p -t "$TMUX_PANE" '#S:#I #W')
-    [ "$(focused_title)" = "$session" ] && on_screen=1
+    # The title may carry tmux.conf's 🟡/🟢 prefix in front of the session.
+    case $(focused_title) in
+        "$session" | *" $session") on_screen=1 ;;
+    esac
     window_active=$(tmux display-message -p -t "$TMUX_PANE" '#{window_active}')
     # Mark the window unless it is the one you are looking at.
     if [ "$on_screen" = 1 ] && [ "$window_active" = 1 ]; then

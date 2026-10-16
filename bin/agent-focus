@@ -3,7 +3,8 @@
 # Bring the agent running in tmux pane $1 on screen: select its tmux window
 # and pane, then raise the terminal tab whose tmux client shows that session.
 # Run when you click an agent-tmux-flag notification. Terminal tabs are found
-# by title, which tmux.conf sets to the session name.
+# by title, which tmux.conf sets to the session name (with an optional
+# 🟡/🟢 prefix).
 
 # terminal-notifier runs this with a bare environment.
 PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
@@ -12,6 +13,9 @@ pane=${1:?usage: agent-focus <tmux-pane>}
 session=$(tmux display-message -p -t "$pane" '#S') || exit 1
 tmux select-window -t "$pane"
 tmux select-pane -t "$pane"
+# select-window fires no session-window-changed when the window is already
+# current in its session, so clear the mark here too.
+tmux set-option -w -u -t "$pane" @agent
 
 # The most recently used client on that session. If none is attached, move
 # the most recently used client over to it.
@@ -43,7 +47,7 @@ case $app in
         for socket in /tmp/kitty-*; do
             [ -S "$socket" ] || continue
             /Applications/kitty.app/Contents/MacOS/kitten @ --to "unix:$socket" \
-                focus-window --match "title:^$session\$" 2>/dev/null && break
+                focus-window --match "title:(^| )$session\$" 2>/dev/null && break
         done
         open -a kitty
         ;;
@@ -52,7 +56,8 @@ case $app in
 on run {sessionName}
     tell application "Ghostty"
         activate
-        focus (first terminal whose name is sessionName)
+        -- The title may carry tmux.conf's 🟡/🟢 prefix.
+        focus (first terminal whose name is sessionName or name ends with (" " & sessionName))
     end tell
 end run
 APPLESCRIPT
