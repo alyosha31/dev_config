@@ -22,6 +22,7 @@ map("n", "<C-h>", "<C-w>h")
 map("n", "<C-l>", "<C-w>l")
 
 map("n", "<leader>h", ":nohlsearch<CR>", { silent = true })
+map("n", "<Esc>", "<cmd>nohlsearch<CR>", { silent = true, desc = "Clear search highlight" })
 
 -- yazi
 map("n", "<leader>e", "<cmd>Yazi<CR>", { desc = "Open Yazi" })
