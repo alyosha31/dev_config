@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# Tell you when an agent (Claude Code, Codex) needs you. Called from the
+# agents' hooks:
+#   agent-tmux-flag wait  <agent>   blocked on a question or permission
+#   agent-tmux-flag done  <agent>   finished its turn
+#   agent-tmux-flag clear <agent>   you answered it
+# Inside tmux the agent's window gets an @agent mark, which tmux.conf renders
+# and clears when you switch to the window. Unless the focused terminal tab
+# is showing the agent's tmux session, a macOS notification is shown too.
+
+state=${1:-}
+agent=${2:-Agent}
+
+# Hooks pipe their event JSON to stdin; Claude's Notification event carries a
+# human-readable message such as "Claude needs your permission to use Bash".
+message=$(jq -r '.message // empty' 2>/dev/null)
+
+case $state in
+    clear)
+        [ -n "${TMUX_PANE:-}" ] && tmux set-option -w -u -t "$TMUX_PANE" @agent
+        exit 0
+        ;;
+    wait) flag='?' default_message="$agent needs your input" ;;
+    done) flag='✓' default_message="$agent finished" ;;
+    *) exit 0 ;;
+esac
+
+# Title of the focused tab in the frontmost app, if that app is a terminal.
+# tmux.conf titles each tab with its session name. lsappinfo needs no
+# Automation permission, unlike System Events.
+focused_title() {
+    case $(lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null) in
+        *'"Ghostty"'*)
+            osascript -e 'tell application "Ghostty" to get name of focused terminal of selected tab of front window' 2>/dev/null
+            ;;
+        *'"kitty"'*)
+            for socket in /tmp/kitty-*; do
+                [ -S "$socket" ] || continue
+                /Applications/kitty.app/Contents/MacOS/kitten @ --to "unix:$socket" ls 2>/dev/null |
+                    jq -r '.[] | select(.is_focused) | .tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .title' &&
+                    break
+            done
+            ;;
+    esac
+}
+
+where=""
+on_screen=0
+if [ -n "${TMUX_PANE:-}" ]; then
+    session=$(tmux display-message -p -t "$TMUX_PANE" '#S')
+    where=$(tmux display-message -p -t "$TMUX_PANE" '#S:#I #W')
+    [ "$(focused_title)" = "$session" ] && on_screen=1
+    window_active=$(tmux display-message -p -t "$TMUX_PANE" '#{window_active}')
+    # Mark the window unless it is the one you are looking at.
+    if [ "$on_screen" = 1 ] && [ "$window_active" = 1 ]; then
+        exit 0
+    fi
+    tmux set-option -w -t "$TMUX_PANE" @agent "$flag"
+    # The session's status bar is on screen, so the mark and the same sound
+    # the notification uses are enough.
+    if [ "$on_screen" = 1 ]; then
+        afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &
+        exit 0
+    fi
+fi
+
+# Clicking the notification brings the agent's tmux window on screen. One
+# notification per pane: a newer one replaces the older.
+set -- -title "$agent" -subtitle "$where" -message "${message:-$default_message}" \
+    -sound Glass -group "agent-${TMUX_PANE:-$agent}"
+[ -n "${TMUX_PANE:-}" ] && set -- "$@" -execute "/Users/mg/dev_config/bin/agent-focus $TMUX_PANE"
+terminal-notifier "$@" >/dev/null 2>&1 &
