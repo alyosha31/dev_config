@@ -1,0 +1,52 @@
+# Ported from ../kitty/kitty.conf. Kitty-only features with no Ghostty
+# equivalent (hints kitten, nvim scrollback pager, powerline tab bar) are
+# noted at the bottom.
+
+# Catppuccin Mocha, to match tmux and Neovim.
+theme = Catppuccin Mocha
+
+# Diff backgrounds for 256-colour programs (lazygit, delta, tig): Catppuccin's
+# crust tinted towards green/red/yellow, matching Neovim's catppuccin diffs.
+palette = 22=#2E4632
+palette = 28=#3A5B3A
+palette = 52=#502334
+palette = 88=#692A3F
+palette = 58=#3F3B39
+palette = 100=#625A4F
+
+font-family = JetBrains Mono
+font-size = 17
+# Keep operators such as != as separate glyphs.
+font-feature = -calt
+font-feature = -liga
+font-feature = -dlig
+
+# Tabs live in the titlebar, at the top.
+macos-titlebar-style = tabs
+
+# New tabs/windows/splits open in the shell's last reported directory
+# (OSC 7 from shell integration), like kitty's --cwd=last_reported.
+tab-inherit-working-directory = true
+window-inherit-working-directory = true
+shell-integration = zsh
+
+keybind = super+t=new_tab
+keybind = ctrl+shift+t=new_tab
+keybind = super+n=new_window
+keybind = ctrl+shift+n=new_window
+# Kitty "windows" are Ghostty splits.
+keybind = super+enter=new_split:auto
+keybind = ctrl+shift+enter=new_split:auto
+
+# GUI apps launched from Finder/Dock do not inherit Homebrew's shell PATH.
+env = PATH=/Users/mg/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+env = EDITOR=nvim
+env = VISUAL=nvim
+# Do not let a parent tool's accessibility setting disable colours.
+env = NO_COLOR=
+
+# Not portable from kitty:
+# - ctrl+g hints kitten (open path:line in nvim): no hints API in Ghostty.
+#   Cmd-click on URLs works by default (link-url).
+# - ctrl+shift+h nvim scrollback pager: use cmd+f search, or tmux copy-mode.
+# - Welcome card: run from ~/.zshrc when TERM_PROGRAM=ghostty.
