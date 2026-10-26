@@ -5,6 +5,7 @@ require("lazy").setup({
 	require("plugins.diffview"),
 	require("plugins.gitsigns"),
 	require("plugins.lazydev"),
+	require("plugins.lazygit"),
 	require("plugins.lualine"),
 	require("plugins.markview"),
 	require("plugins.mason"),

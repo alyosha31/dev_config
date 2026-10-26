@@ -9,6 +9,7 @@ buffer's own help.
 | Key | Does |
 | --- | --- |
 | `<leader>gg` | Fugitive status — stage, commit, stash |
+| `<leader>lg` | LazyGit in a floating terminal |
 | `<leader>gL` | Log graph (`git log --graph`) |
 | `<leader>gd` | Diffview: working tree vs index |
 | `<leader>gl` | Diffview: repo commit log — the tree you browse |
