@@ -39,7 +39,7 @@ keybind = super+enter=new_split:auto
 keybind = ctrl+shift+enter=new_split:auto
 
 # GUI apps launched from Finder/Dock do not inherit Homebrew's shell PATH.
-env = PATH=/Users/mg/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+env = PATH=/Users/alyosha/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 env = EDITOR=nvim
 env = VISUAL=nvim
 # Do not let a parent tool's accessibility setting disable colours.

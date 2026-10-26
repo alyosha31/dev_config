@@ -63,7 +63,7 @@ fi
 # A new terminal tab can occasionally start above the project directory. Search
 # the normal source-code roots by the complete emitted suffix in that case.
 if [[ -z $resolved ]]; then
-    for search_root in /Users/mg/Development /Users/mg/projects; do
+    for search_root in /Users/alyosha/Development /Users/alyosha/projects; do
         [[ -d $search_root ]] || continue
         candidate=$(/usr/bin/find "$search_root" -type d -name .git -prune -o -type f -path "*/$path" -print -quit 2>/dev/null)
         if [[ -n $candidate ]]; then
