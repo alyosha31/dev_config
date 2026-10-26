@@ -72,5 +72,5 @@ fi
 # notification per pane: a newer one replaces the older.
 set -- -title "$agent" -subtitle "$where" -message "${message:-$default_message}" \
     -sound Glass -group "agent-${TMUX_PANE:-$agent}"
-[ -n "${TMUX_PANE:-}" ] && set -- "$@" -execute "/Users/mg/dev_config/bin/agent-focus $TMUX_PANE"
+[ -n "${TMUX_PANE:-}" ] && set -- "$@" -execute "/Users/alyosha/dev_config/bin/agent-focus $TMUX_PANE"
 terminal-notifier "$@" >/dev/null 2>&1 &
