@@ -30,6 +30,7 @@ and treesitter are intact.
 | --- | --- |
 | `]h` / `[h` | Next / previous hunk |
 | `<leader>gi` | **Inline diff in the file** — changed lines green, removed lines back in place in red. Toggles |
+| `<leader>gI` | Same inline diff, but only the unstaged changes (against the index). Toggles |
 | `<leader>gp` | Preview the hunk in a float |
 | `<leader>gP` | Preview one hunk inline, without turning the whole mode on |
 | `<leader>gs` | Stage the hunk — in visual mode, only the selected lines |
@@ -55,7 +56,9 @@ backgrounds for what changed, brighter word-level highlights inside them, and
 the removed lines put back as red virtual lines where they used to be. With no
 base set it compares against `HEAD~1`; with one set by `<leader>gB` it follows
 that instead, and toggling off restores whatever base you had. It's a real
-buffer the whole time, so `gd`, `gr` and folds keep working.
+buffer the whole time, so `gd`, `gr` and folds keep working. `<leader>gI` is
+the same view against the index, so it shows only what you haven't staged,
+whatever base is set.
 
 ## Blame
 

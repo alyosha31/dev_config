@@ -93,15 +93,15 @@ map("n", "[h", "<cmd>Gitsigns nav_hunk prev<CR>", { desc = "Previous Git hunk" }
 -- back to the previous commit, and restores that base when toggled off.
 local inline_diff = { on = false, base = nil }
 
-map("n", "<leader>gi", function()
+-- `target` nil means the index, so the diff is only the unstaged changes.
+local function toggle_inline_diff(target)
   local gs = require("gitsigns")
-  local base = require("gitsigns.config").config.base
 
   inline_diff.on = not inline_diff.on
 
   if inline_diff.on then
-    inline_diff.base = base
-    gs.change_base(base or "HEAD~1", true)
+    inline_diff.base = require("gitsigns.config").config.base
+    gs.change_base(target, true)
   else
     gs.change_base(inline_diff.base, true)
   end
@@ -110,8 +110,16 @@ map("n", "<leader>gi", function()
   gs.toggle_word_diff(inline_diff.on)
   gs.toggle_deleted(inline_diff.on)
 
-  vim.notify("inline diff " .. (inline_diff.on and ("vs " .. (base or "HEAD~1")) or "off"))
+  vim.notify("inline diff " .. (inline_diff.on and ("vs " .. (target or "index")) or "off"))
+end
+
+map("n", "<leader>gi", function()
+  toggle_inline_diff(require("gitsigns.config").config.base or "HEAD~1")
 end, { desc = "Toggle inline diff in the file" })
+
+map("n", "<leader>gI", function()
+  toggle_inline_diff(nil)
+end, { desc = "Toggle inline diff of unstaged changes" })
 
 -- One hunk, inline, without turning the whole mode on.
 map("n", "<leader>gP", "<cmd>Gitsigns preview_hunk_inline<CR>", { desc = "Preview hunk inline" })
