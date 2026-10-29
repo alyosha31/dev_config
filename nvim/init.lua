@@ -57,11 +57,21 @@ require("theme")
 local capabilities = require("blink.cmp").get_lsp_capabilities()
 
 local function get_python_path()
-  local cwd = vim.fn.getcwd()
-  local venv_python = cwd .. "/.venv/bin/python"
+  local dir = vim.fn.getcwd()
 
-  if vim.fn.executable(venv_python) == 1 then
-    return venv_python
+  while dir and dir ~= "" do
+    local venv_python = dir .. "/.venv/bin/python"
+
+    if vim.fn.executable(venv_python) == 1 then
+      return venv_python
+    end
+
+    local parent = vim.fn.fnamemodify(dir, ":h")
+    if parent == dir then
+      break
+    end
+
+    dir = parent
   end
 
   return "python3"

@@ -20,12 +20,18 @@ vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
 vim.opt.signcolumn = "yes"
 vim.opt.updatetime = 200
-vim.opt.timeoutlen = 300
+-- Long enough to reach for shift mid-chord: <leader>gB and friends were
+-- timing out at 300ms and falling through as literal keys. Terminal escape
+-- sequences use ttimeoutlen (50ms), so this costs nothing there.
+vim.opt.timeoutlen = 800
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 vim.opt.cursorline = true
+-- lualine_a already shows the mode. Without this, Vim also draws its own
+-- "-- INSERT --" in the command line under the statusline.
+vim.opt.showmode = false
 vim.opt.clipboard = "unnamedplus"
 vim.g.clipboard = {
   name = "OSC 52",

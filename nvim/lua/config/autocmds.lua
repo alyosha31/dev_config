@@ -77,3 +77,17 @@ vim.api.nvim_create_user_command("Template", function()
         )
     end
 end, {})
+
+-- Git keymap cheatsheet: :GitKeys or <leader>g?
+vim.api.nvim_create_user_command("GitKeys", function()
+    local path = vim.fn.stdpath("config") .. "/GIT-KEYMAPS.md"
+
+    if vim.fn.filereadable(path) ~= 1 then
+        vim.notify("Cheatsheet not found: " .. path, vim.log.levels.ERROR)
+        return
+    end
+
+    vim.cmd("tabedit " .. vim.fn.fnameescape(path))
+    vim.bo.modifiable = false
+    vim.keymap.set("n", "q", "<cmd>tabclose<CR>", { buffer = 0, desc = "Close cheatsheet" })
+end, { desc = "Git keymap cheatsheet" })

@@ -1,0 +1,65 @@
+#!/bin/sh
+
+# Bring the agent running in tmux pane $1 on screen: select its tmux window
+# and pane, then raise the terminal tab whose tmux client shows that session.
+# Run when you click an agent-tmux-flag notification. Terminal tabs are found
+# by title, which tmux.conf sets to the session name (with an optional
+# 🟡/🟢 prefix).
+
+# terminal-notifier runs this with a bare environment.
+PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+
+pane=${1:?usage: agent-focus <tmux-pane>}
+session=$(tmux display-message -p -t "$pane" '#S') || exit 1
+tmux select-window -t "$pane"
+tmux select-pane -t "$pane"
+# select-window fires no session-window-changed when the window is already
+# current in its session, so clear the mark here too.
+tmux set-option -w -u -t "$pane" @agent
+
+# The most recently used client on that session. If none is attached, move
+# the most recently used client over to it.
+latest_client() {
+    tmux list-clients "$@" -F '#{client_activity} #{client_pid} #{client_name}' | sort -n | tail -1
+}
+client=$(latest_client -t "$session")
+if [ -z "$client" ]; then
+    client=$(latest_client)
+    [ -n "$client" ] || exit 0
+    tmux switch-client -c "${client##* }" -t "$pane"
+fi
+client_pid=$(echo "$client" | cut -d' ' -f2)
+
+# Walk up from the tmux client to the terminal app that hosts it.
+app=""
+p=$client_pid
+while [ -n "$p" ] && [ "$p" -gt 1 ]; do
+    case $(ps -o comm= -p "$p") in
+        */kitty.app/*) app=kitty; break ;;
+        */Ghostty.app/*) app=ghostty; break ;;
+    esac
+    p=$(ps -o ppid= -p "$p" | tr -d ' ')
+done
+
+case $app in
+    kitty)
+        # Needs allow_remote_control and listen_on in kitty.conf.
+        for socket in /tmp/kitty-*; do
+            [ -S "$socket" ] || continue
+            /Applications/kitty.app/Contents/MacOS/kitten @ --to "unix:$socket" \
+                focus-window --match "title:(^| )$session\$" 2>/dev/null && break
+        done
+        open -a kitty
+        ;;
+    ghostty)
+        osascript - "$session" <<'APPLESCRIPT'
+on run {sessionName}
+    tell application "Ghostty"
+        activate
+        -- The title may carry tmux.conf's 🟡/🟢 prefix.
+        focus (first terminal whose name is sessionName or name ends with (" " & sessionName))
+    end tell
+end run
+APPLESCRIPT
+        ;;
+esac

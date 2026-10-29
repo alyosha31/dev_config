@@ -1,0 +1,54 @@
+# Open a visible path:line reference in Neovim in a new Kitty tab.
+# Press Ctrl-G, then type the hint label shown over the desired reference.
+map ctrl+g kitten hints --customize-processing /Users/mg/dev_config/kitty/code-hints.py
+
+# Open new tabs, splits and OS windows in the active terminal's working
+# directory. Kitty's defaults for these start in its own cwd instead.
+map ctrl+shift+t new_tab_with_cwd
+map cmd+t new_tab_with_cwd
+map ctrl+shift+enter new_window_with_cwd
+map cmd+enter new_window_with_cwd
+map ctrl+shift+n new_os_window_with_cwd
+map cmd+n new_os_window_with_cwd
+
+# Open links with Cmd-click, including inside terminal apps that grab the mouse.
+mouse_map cmd+left release grabbed,ungrabbed mouse_handle_click link
+mouse_map cmd+left press grabbed discard_event
+
+# Browse terminal history with real Neovim motions.
+# Open it with Ctrl-Shift-H.
+scrollback_pager nvim --cmd 'set eventignore=FileType' +'nnoremap q ZQ' +'call nvim_open_term(0, {})' +'set nomodified nolist' +'$' -
+scrollback_pager_history_size 64
+
+# Enables prompt-aware navigation and preserves each command's working directory.
+shell_integration enabled
+
+# Show the custom welcome card whenever Kitty starts an interactive shell.
+env KITTY_SI_RUN_COMMAND_AT_STARTUP=/Users/mg/dev_config/kitty/welcome
+
+# Keep the normal terminal editor consistent with the reference opener.
+editor nvim
+
+# GUI apps launched from Finder/Dock do not inherit Homebrew's shell PATH.
+# This environment is inherited by Kitty shells and programs launched by hints.
+env PATH=/Users/mg/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+env EDITOR=nvim
+env VISUAL=nvim
+
+# Do not let a parent tool's accessibility setting disable colors in Kitty.
+env NO_COLOR
+
+
+# BEGIN_KITTY_THEME
+# kanagawabones
+include current-theme.conf
+# END_KITTY_THEME
+
+# BEGIN_KITTY_FONTS
+font_family      family="JetBrains Mono"
+bold_font        auto
+italic_font      auto
+bold_italic_font auto
+# Keep operators such as != as separate glyphs in Neovim and other terminal apps.
+disable_ligatures always
+# END_KITTY_FONTS

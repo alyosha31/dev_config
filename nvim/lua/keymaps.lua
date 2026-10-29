@@ -3,20 +3,168 @@
 -- =========================================
 local map = vim.keymap.set
 
+-- macOS terminals send Option+Delete as Meta+Backspace.
+map("i", "<M-BS>", "<C-w>", { desc = "Delete previous word" })
+
+-- Kitty passes Cmd+C/V/X through to Neovim whenever the terminal has no mouse
+-- selection of its own. Neovim then drops the unmatched D- modifier and runs
+-- the bare key, so Cmd+C over a visual block ran `c` and deleted it. Bind the
+-- macOS clipboard keys to what they mean everywhere else.
+map({ "n", "v" }, "<D-c>", '"+y', { desc = "Copy to system clipboard" })
+map({ "n", "v" }, "<D-v>", '"+p', { desc = "Paste from system clipboard" })
+map("i", "<D-v>", "<C-r>+", { desc = "Paste from system clipboard" })
+map("c", "<D-v>", "<C-r>+", { desc = "Paste from system clipboard" })
+map("v", "<D-x>", '"+d', { desc = "Cut to system clipboard" })
+
 map("n", "<C-k>", "<C-w>k")
 map("n", "<C-j>", "<C-w>j")
 map("n", "<C-h>", "<C-w>h")
 map("n", "<C-l>", "<C-w>l")
 
 map("n", "<leader>h", ":nohlsearch<CR>", { silent = true })
+map("n", "<Esc>", "<cmd>nohlsearch<CR>", { silent = true, desc = "Clear search highlight" })
 
 -- yazi
 map("n", "<leader>e", "<cmd>Yazi<CR>", { desc = "Open Yazi" })
 map("n", "<leader>E", "<cmd>Yazi cwd<CR>", { desc = "Open Yazi in cwd" })
 
 
--- Lazygit
-vim.keymap.set("n", "<leader>gg", "<cmd>LazyGit<cr>", { desc = "Open LazyGit" })
+-- git
+-- Diff/history entry points (<leader>gd/gl/gh/gm/gc/gq) live in plugins/diffview.lua.
+map("n", "<leader>g?", "<cmd>GitKeys<CR>", { desc = "Git keymap cheatsheet" })
+map("n", "<leader>gg", "<cmd>Git<CR>", { desc = "Git status" })
+map("n", "<leader>gL", "<cmd>Git log --oneline --graph --decorate<CR>", { desc = "Git log graph" })
+map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview Git hunk" })
+map("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<CR>", { desc = "Reset Git hunk" })
+map("n", "<leader>gs", "<cmd>Gitsigns stage_hunk<CR>", { desc = "Stage Git hunk" })
+map("n", "<leader>gS", "<cmd>Gitsigns stage_buffer<CR>", { desc = "Stage whole file" })
+map("n", "<leader>gu", "<cmd>Gitsigns undo_stage_hunk<CR>", { desc = "Undo last hunk stage" })
+map("n", "<leader>gt", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "Toggle Git line blame" })
+map("n", "<leader>gw", "<cmd>Gitsigns toggle_word_diff<CR>", { desc = "Toggle word diff" })
+map("n", "<leader>gQ", "<cmd>Gitsigns setqflist all<CR>", { desc = "All repo hunks to quickfix" })
+map("n", "<leader>gb", function()
+  require("gitsigns").blame_line({ full = true })
+end, { desc = "Show Git line blame" })
+
+-- The two follow-ups to <leader>gb: review that commit here, or go read the
+-- discussion around it. Both work off the blame for the cursor line, so the
+-- float does not have to be open -- and on a line that already shows a hash
+-- (fugitive log/blame, diffview's log panel) they use that hash instead.
+map("n", "<leader>go", function()
+  local sha = require("util.git").commit_at_cursor()
+  if sha then
+    -- `^!` is "this commit against its parent", the same as <leader>gc.
+    vim.cmd("DiffviewOpen " .. sha .. "^!")
+  end
+end, { desc = "Open this line's commit in Diffview" })
+
+map("n", "<leader>gO", function()
+  local git = require("util.git")
+  local sha = git.commit_at_cursor()
+  if sha then
+    git.browse_commit(sha)
+  end
+end, { desc = "Open this line's PR on GitHub" })
+
+-- Blame the whole file in a side window, scrollbound to it. Unlike the float
+-- it is a real buffer you can move around in: `s`/`S`/`e` show the commit
+-- under the cursor, `r` reblames at it, `d` diffs it, `<CR>` lists the lot.
+map("n", "<leader>gA", "<cmd>Gitsigns blame<CR>", { desc = "Blame the whole file" })
+
+-- Stage / reset just the selected lines.
+map("v", "<leader>gs", function()
+  require("gitsigns").stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end, { desc = "Stage selected lines" })
+map("v", "<leader>gr", function()
+  require("gitsigns").reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end, { desc = "Reset selected lines" })
+
+-- Hunk as a text object: dih, yah, vih ...
+map({ "o", "x" }, "ih", "<cmd>Gitsigns select_hunk<CR>", { desc = "Inside hunk" })
+map({ "o", "x" }, "ah", "<cmd>Gitsigns select_hunk<CR>", { desc = "Around hunk" })
+
+-- Same hunk motions as inside a diffview, so ]h/[h works everywhere.
+map("n", "]h", "<cmd>Gitsigns nav_hunk next<CR>", { desc = "Next Git hunk" })
+map("n", "[h", "<cmd>Gitsigns nav_hunk prev<CR>", { desc = "Previous Git hunk" })
+
+-- Draw the diff in the file itself: changed lines get a green background, the
+-- changed words within them a brighter green, and removed lines appear in
+-- place as red virtual lines. Compares against whatever base is set, falling
+-- back to the previous commit, and restores that base when toggled off.
+local inline_diff = { on = false, base = nil }
+
+-- `target` nil means the index, so the diff is only the unstaged changes.
+local function toggle_inline_diff(target)
+  local gs = require("gitsigns")
+
+  inline_diff.on = not inline_diff.on
+
+  if inline_diff.on then
+    inline_diff.base = require("gitsigns.config").config.base
+    gs.change_base(target, true)
+  else
+    gs.change_base(inline_diff.base, true)
+  end
+
+  gs.toggle_linehl(inline_diff.on)
+  gs.toggle_word_diff(inline_diff.on)
+  gs.toggle_deleted(inline_diff.on)
+
+  vim.notify("inline diff " .. (inline_diff.on and ("vs " .. (target or "index")) or "off"))
+end
+
+map("n", "<leader>gi", function()
+  toggle_inline_diff(require("gitsigns.config").config.base or "HEAD~1")
+end, { desc = "Toggle inline diff in the file" })
+
+map("n", "<leader>gI", function()
+  toggle_inline_diff(nil)
+end, { desc = "Toggle inline diff of unstaged changes" })
+
+-- One hunk, inline, without turning the whole mode on.
+map("n", "<leader>gP", "<cmd>Gitsigns preview_hunk_inline<CR>", { desc = "Preview hunk inline" })
+
+-- Review a commit or a whole branch inside the real files: point gitsigns at
+-- another revision and its changes show as signs in the buffer on disk, where
+-- gd/gr and treesitter still work. Empty input resets to the index.
+map("n", "<leader>gB", function()
+  local gs = require("gitsigns")
+
+  vim.ui.input({
+    prompt = "Gitsigns diff base (empty resets to index): ",
+    default = require("util.git").base_rev() or "HEAD~1",
+  }, function(rev)
+    if rev == nil then
+      return
+    end
+
+    if rev == "" then
+      gs.change_base(nil, true)
+      vim.notify("gitsigns base: index")
+    else
+      gs.change_base(rev, true)
+      vim.notify("gitsigns base: " .. rev)
+    end
+  end)
+end, { desc = "Set gitsigns diff base" })
+
+local function git_revision_file(command, prompt)
+  vim.ui.input({ prompt = prompt }, function(revision)
+    if not revision or revision == "" then
+      return
+    end
+
+    vim.api.nvim_cmd({ cmd = command, args = { revision .. ":%" } }, {})
+  end)
+end
+
+map("n", "<leader>gD", function()
+  git_revision_file("Gvdiffsplit", "Diff current file against revision: ")
+end, { desc = "Diff current file against Git revision" })
+
+map("n", "<leader>gE", function()
+  git_revision_file("Gedit", "Open current file from revision: ")
+end, { desc = "Open current file from Git revision" })
 
 
 -- telescope
@@ -26,6 +174,9 @@ map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
 map("n", "<leader>fd", "<cmd>Telescope diagnostics bufnr=0<CR>", { desc = "Buffer diagnostics" })
 map("n", "<leader>ds", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Document symbols" })
+map("n", "<leader>dm", function()
+  require("telescope.builtin").lsp_document_symbols({ symbols = { "method", "function" } })
+end, { desc = "Document methods/functions" })
 map("n", "<leader>ws", "<cmd>Telescope lsp_workspace_symbols<CR>", { desc = "Workspace symbols" })
 
 -- file ops
@@ -49,6 +200,60 @@ map("t", "<C-l>", [[<C-\><C-n><C-w>l]])
 -- buffer nav
 map("n", "<S-l>", "<cmd>bnext<CR>", { desc = "Next buffer" })
 map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
+
+-- structural navigation
+local function jump_to_enclosing_type()
+  local node = vim.treesitter.get_node()
+  if not node then
+    vim.notify("No syntax node under the cursor", vim.log.levels.WARN)
+    return
+  end
+
+  local type_nodes = {
+    -- Python / JavaScript / TypeScript
+    class_definition = true,
+    class_declaration = true,
+    class = true,
+    interface_declaration = true,
+    type_alias_declaration = true,
+
+    -- C / C++ / C# / Java
+    class_specifier = true,
+    struct_specifier = true,
+    union_specifier = true,
+    enum_specifier = true,
+    struct_declaration = true,
+    enum_declaration = true,
+    record_declaration = true,
+    annotation_type_declaration = true,
+
+    -- Rust
+    impl_item = true,
+    struct_item = true,
+    enum_item = true,
+    trait_item = true,
+
+    -- Kotlin / PHP / Ruby and similar parsers
+    object_declaration = true,
+    trait_declaration = true,
+    module = true,
+  }
+
+  while node do
+    if type_nodes[node:type()] then
+      local row, col = node:start()
+      vim.cmd("normal! m'")
+      vim.api.nvim_win_set_cursor(0, { row + 1, col })
+      vim.cmd("normal! zz")
+      return
+    end
+    node = node:parent()
+  end
+
+  vim.notify("No enclosing class/type found", vim.log.levels.INFO)
+end
+
+map("n", "gC", jump_to_enclosing_type, { desc = "Jump to enclosing type" })
 
 -- diagnostics
 vim.keymap.set("n", "gl", vim.diagnostic.open_float, { desc = "Line diagnostics" })

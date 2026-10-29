@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# A small welcome card for each new interactive Kitty shell.
+if [ -t 1 ] && [ "${TERM:-}" != "dumb" ]; then
+    printf '\n'
+    printf '\033[38;2;249;226;175m%s\n' '                     ✦'
+    printf '\033[38;2;203;166;247m%s\n' '             ╱|、'
+    printf '%s\n'                  '            (˚ˎ 。7'
+    printf '%s\n'                  '             |、˜〵'
+    printf '%s\n'                  '             じしˍ,)ノ'
+    printf '\033[38;2;88;91;112m%s\n' '   ──────────────────────────────────────────────────────────'
+    printf '\033[38;2;245;194;231m%s\n' '   大胆去做，不要怕，没有人在乎，'
+    printf '%s\n'                  '   就算有人在乎，人又算什么东西。'
+    printf '\033[0m\n'
+fi
