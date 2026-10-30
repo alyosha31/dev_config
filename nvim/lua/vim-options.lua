@@ -40,3 +40,6 @@ vim.opt.mouse = "a"
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.undofile = true
+-- The default adds -uu, which also searches git-ignored files: in fulfil-io
+-- that means all of .venv.
+vim.opt.grepprg = "rg --vimgrep --smart-case"
