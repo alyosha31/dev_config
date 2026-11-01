@@ -91,3 +91,10 @@ vim.api.nvim_create_user_command("GitKeys", function()
     vim.bo.modifiable = false
     vim.keymap.set("n", "q", "<cmd>tabclose<CR>", { buffer = 0, desc = "Close cheatsheet" })
 end, { desc = "Git keymap cheatsheet" })
+
+-- Flash what was just yanked, so it's clear what `yi(` or `yap` actually took.
+vim.api.nvim_create_autocmd("TextYankPost", {
+    callback = function()
+        vim.hl.on_yank()
+    end,
+})
