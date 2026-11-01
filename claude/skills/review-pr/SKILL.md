@@ -246,25 +246,49 @@ this hunk? Name it, or say none does. Do not run it.
   the reviewer to verify is a question, not a finding
 - style preferences with no rule or precedent behind them
 
+### How a comment reads
+
+The comments go out under the reviewer's name, so they read the way the
+reviewer types a quick comment to a teammate, not like a report:
+
+- all lowercase, the first word included
+- no punctuation but commas and periods: no question marks, colons, dashes,
+  brackets, quotes or exclamation marks. A question is still a question, it
+  just ends without the mark
+- short, one or two sentences. Point at the spot and ask, rather than walking
+  the author through the whole scenario: they know the code, and a question
+  lets them find it
+- ask rather than tell, with the hunch in a few words: can you check, what
+  happens when, could we, why does this, i think
+- code keeps its exact spelling and case inside backticks, like
+  `order.address` or `None`. That is the only exception to the rules above
+
+| Instead of | Write |
+|---|---|
+| `order.address` is empty for pickup orders, so this line raises. Could we guard it, or skip the shipping quote for those? | can you check what happens here for pickup orders, i think `order.address` is empty for those so this would raise |
+| This duplicates the rounding in `round_price` (pricing.py:40); please reuse the helper. | could we use `round_price` here, the other totals in this file go through it |
+| Nit: `q` is unclear — consider renaming it to `qty` to match the rest of the module. | maybe `qty` instead of `q`, the rest of the file uses that |
+| There's no test covering the pickup case, which is the bug this PR fixes. | is there a test for the pickup case, i couldnt find one |
+
 ### Add each finding as a draft
 
 As soon as a finding is settled, add it, so the reviewer can watch them arrive.
-Only the comment goes in: the words the author will read, written in the
-reviewer's voice — one point, specific, a question when unsure, a short code
-suggestion when that is clearer than prose. The reasoning behind it stays out.
+Only the comment goes in, one point each, written as above. The reasoning
+behind it stays out.
 
 ```bash
 tuicr review add --session <slug> --input - <<'JSON'
 {"username": "Claude", "type": "issue", "file": "src/orders/checkout.py", "line": 212,
- "content": "`order.address` is empty for pickup orders, so this line raises. Could we guard it, or skip the shipping quote for those?"}
+ "content": "can you check what happens here for pickup orders, i think `order.address` is empty for those so this would raise"}
 JSON
 ```
 
 - JSON on stdin under a quoted heredoc: comments hold backticks and quotes
   that a shell argument would mangle or run
 - `username` is always `Claude`, so the reviewer can tell drafts from their own
-- `type` is `issue` for must fix, `suggestion` for should fix, `nit` for nit,
-  and `question` for anything framed as a question
+- `type` says how much it matters, whatever the wording: `issue` for must fix,
+  `suggestion` for should fix, `nit` for nit, and `question` when you don't
+  know and nothing may be wrong
 - line numbers are new-file lines (in local mode, the file as it is on disk),
   from the `+c,d` side of the hunk header. A range takes `start_line` and
   `end_line` instead of `line`; a removed line takes its old line number and
@@ -326,9 +350,8 @@ change to work through what's left.
 
   ```
   ### Must fix
-  - src/orders/checkout.py:212 — "`order.address` is empty for pickup orders,
-    so this line raises. Could we guard it, or skip the shipping quote for
-    those?"
+  - src/orders/checkout.py:212 — "can you check what happens here for pickup
+    orders, i think `order.address` is empty for those so this would raise"
 
   ### Should fix
   ### Nits
