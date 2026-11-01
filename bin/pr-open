@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# Open the GitHub PR for the checkout at $1 in the browser, and say what
+# happened on tmux client $2. Bound to prefix P in tmux.conf.
+#
+# gh finds the PR from the branch, which covers your own branches and the
+# worktrees `wt switch pr:N` makes. A detached checkout has no branch to go
+# by, so then look for an open PR whose head is this commit, in the repo PRs
+# are opened against (a fork's parent).
+
+# tmux runs this with the server's environment, which may predate Homebrew's.
+PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+
+dir=${1:?usage: pr-open <dir> [tmux-client]}
+client=${2:-}
+
+say() {
+    if [ -n "$client" ]; then
+        tmux display-message -c "$client" "$1"
+    else
+        echo "$1"
+    fi
+}
+
+cd "$dir" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1 || {
+    say "Not a git checkout: $dir"
+    exit 1
+}
+
+url=$(gh pr view --json url --jq .url 2>/dev/null)
+if [ -z "$url" ]; then
+    repo=$(gh repo view --json nameWithOwner,parent \
+        --jq 'if .parent then "\(.parent.owner.login)/\(.parent.name)" else .nameWithOwner end' 2>/dev/null)
+    [ -n "$repo" ] && url=$(gh pr list --repo "$repo" --state open \
+        --search "$(git rev-parse HEAD)" --json url --jq '.[0].url // empty' 2>/dev/null)
+fi
+
+if [ -z "$url" ]; then
+    say "No PR for $(git branch --show-current 2>/dev/null || echo this checkout)"
+    exit 1
+fi
+
+open "$url"
+say "Opened $url"
