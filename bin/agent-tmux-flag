@@ -6,8 +6,9 @@
 #   agent-tmux-flag done  <agent>   finished its turn
 #   agent-tmux-flag clear <agent>   you answered it
 # Inside tmux the agent's window gets an @agent mark, which tmux.conf renders
-# and clears when you switch to the window. Unless the focused terminal tab
-# is showing the agent's tmux session, a macOS notification is shown too.
+# and clears when you switch to the window. A macOS notification is shown
+# too, unless you are already looking at the agent: the focused terminal tab
+# shows its tmux session or, outside tmux, is the agent's own Ghostty tab.
 
 state=${1:-}
 agent=${2:-Agent}
@@ -45,6 +46,31 @@ focused_title() {
     esac
 }
 
+# tty of the focused terminal in the frontmost app, if that app is Ghostty.
+focused_tty() {
+    case $(lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null) in
+        *'"Ghostty"'*)
+            osascript -e 'tell application "Ghostty" to get tty of focused terminal of selected tab of front window' 2>/dev/null
+            ;;
+    esac
+}
+
+# The agent's own tty, e.g. /dev/ttys004. Hooks run detached from it, so walk
+# up to the first ancestor that has one: the agent itself.
+agent_tty() {
+    p=$$
+    while [ "${p:-1}" -gt 1 ]; do
+        # read, not word splitting: a bare ?? would glob two-letter filenames.
+        read -r p t <<EOF
+$(ps -o ppid=,tty= -p "$p")
+EOF
+        case $t in
+            '' | '??') ;;
+            *) echo "/dev/$t"; return ;;
+        esac
+    done
+}
+
 where=""
 on_screen=0
 if [ -n "${TMUX_PANE:-}" ]; then
@@ -64,6 +90,13 @@ if [ -n "${TMUX_PANE:-}" ]; then
     # the notification uses are enough.
     if [ "$on_screen" = 1 ]; then
         afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &
+        exit 0
+    fi
+else
+    # No session to find by title, but Ghostty can say which tty its focused
+    # terminal is on. If it is the agent's, you are looking at it.
+    tty=$(agent_tty)
+    if [ -n "$tty" ] && [ "$(focused_tty)" = "$tty" ]; then
         exit 0
     fi
 fi
