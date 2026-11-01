@@ -70,19 +70,13 @@ function M.commit_at_cursor()
 	return sha
 end
 
--- Open a commit on GitHub, preferring the pull request that brought it in --
--- that is where the review and the discussion are. Falls back to the commit
--- page when it landed without one. The gh call hits the network, so this is
--- async: the browser opens a moment after the key.
-function M.browse_commit(sha)
+-- Look up the pull request that brought a commit in. The gh call hits the
+-- network, so this is async: on_pr runs a moment later with { number, url },
+-- or with nil when the commit landed without one.
+local function find_pr(sha, cwd, on_pr)
 	if vim.fn.executable("gh") == 0 then
 		vim.notify("gh is not installed", vim.log.levels.WARN)
 		return
-	end
-
-	local cwd = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
-	if cwd == "" then
-		cwd = vim.uv.cwd()
 	end
 
 	vim.notify("Looking up " .. sha:sub(1, 7) .. " on GitHub...")
@@ -95,17 +89,76 @@ function M.browse_commit(sha)
 			local pr = ok and prs and prs[1]
 
 			vim.schedule(function()
-				if pr then
-					vim.notify("PR #" .. pr.number .. " for " .. sha:sub(1, 7))
-					vim.ui.open(pr.url)
-					return
-				end
-
-				vim.notify("No PR for " .. sha:sub(1, 7) .. " -- opening the commit")
-				vim.system({ "gh", "browse", sha }, { cwd = cwd })
+				on_pr(pr)
 			end)
 		end
 	)
+end
+
+-- Open a commit on GitHub, preferring the pull request that brought it in --
+-- that is where the review and the discussion are. Falls back to the commit
+-- page when it landed without one.
+function M.browse_commit(sha)
+	local cwd = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
+	if cwd == "" then
+		cwd = vim.uv.cwd()
+	end
+
+	find_pr(sha, cwd, function(pr)
+		if pr then
+			vim.notify("PR #" .. pr.number .. " for " .. sha:sub(1, 7))
+			vim.ui.open(pr.url)
+			return
+		end
+
+		vim.notify("No PR for " .. sha:sub(1, 7) .. " -- opening the commit")
+		vim.system({ "gh", "browse", sha }, { cwd = cwd })
+	end)
+end
+
+-- Go through the pull request that brought a commit in, in tuicr. It runs
+-- from the repo root, so tuicr finds the repo, and when this checkout is the
+-- PR's head `e` there opens the real files. Inside tmux it gets a window of
+-- its own, which closes when tuicr quits and drops you back here; outside, a
+-- terminal tab that does the same.
+function M.review_commit_pr(sha)
+	if vim.fn.executable("tuicr") == 0 then
+		vim.notify("tuicr is not installed", vim.log.levels.WARN)
+		return
+	end
+
+	local root = vim.fs.root(0, ".git") or vim.uv.cwd()
+
+	find_pr(sha, root, function(pr)
+		if not pr then
+			vim.notify("No PR for " .. sha:sub(1, 7), vim.log.levels.WARN)
+			return
+		end
+
+		local cmd = { "tuicr", "pr", tostring(pr.number) }
+
+		if vim.env.TMUX then
+			-- Given more than one argument, tmux runs tuicr directly rather
+			-- than through a shell.
+			vim.system(vim.list_extend({ "tmux", "new-window", "-n", "tuicr", "-c", root }, cmd))
+			return
+		end
+
+		vim.cmd.tabnew()
+		local buf = vim.api.nvim_get_current_buf()
+		vim.fn.jobstart(cmd, {
+			term = true,
+			cwd = root,
+			on_exit = function()
+				vim.schedule(function()
+					if vim.api.nvim_buf_is_valid(buf) then
+						vim.api.nvim_buf_delete(buf, { force = true })
+					end
+				end)
+			end,
+		})
+		vim.cmd.startinsert()
+	end)
 end
 
 return M

@@ -40,6 +40,7 @@ and treesitter are intact.
 | `<leader>gb` | Full blame for this line, in a float — sha and PR number are clickable |
 | `<leader>go` | Open the commit that touched this line in Diffview |
 | `<leader>gO` | Open that commit's PR on GitHub — the commit page if it had none |
+| `<leader>gT` | Open that commit's PR in tuicr — its own tmux window, `:q` comes back |
 | `<leader>gA` | Blame the whole file in a side window |
 | `<leader>gt` | Toggle inline blame on every line |
 | `<leader>gw` | Toggle word-level diff highlighting |
@@ -68,10 +69,15 @@ message and the hunk it came from. Press it again to step into the float,
 hyperlinks — cmd+click opens them in the browser.
 
 From the line itself, without the float: `<leader>go` opens that commit in
-Diffview, `<leader>gO` opens its PR on GitHub. Both blame the buffer as it is
-now, so unsaved edits don't throw the line off, and on any line that already
-shows a hash — fugitive's log or blame, diffview's log panel — they act on
-that hash instead.
+Diffview, `<leader>gO` opens its PR on GitHub, `<leader>gT` opens its PR in
+tuicr. All three blame the buffer as it is now, so unsaved edits don't throw
+the line off, and on any line that already shows a hash — fugitive's log or
+blame, diffview's log panel — they act on that hash instead.
+
+`<leader>gT` runs tuicr in a tmux window of its own (a Neovim tab outside
+tmux); `:q` in tuicr closes it and lands you back here. For a PR that is
+already merged, `e` in tuicr opens read-only copies, since your checkout no
+longer matches that PR.
 
 `q` closes what `<leader>go` opens — from the panel or either diff window, the
 whole tab at once. `<leader>gq` does the same from anywhere else.
