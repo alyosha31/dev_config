@@ -24,7 +24,8 @@ font-thicken = true
 
 # To switch pictures, swap which line is commented out, then reload the
 # config with Cmd+Shift+, (or open a new window).
-background-image = /Users/mg/dev_config/ghostty/backgrounds/waterfront-night-retro.png
+background-image = /Users/mg/dev_config/ghostty/backgrounds/neon-night-city.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/waterfront-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-purple.png
 background-image-opacity = 0.3
