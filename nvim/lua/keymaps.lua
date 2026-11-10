@@ -46,10 +46,11 @@ map("n", "<leader>gb", function()
   require("gitsigns").blame_line({ full = true })
 end, { desc = "Show Git line blame" })
 
--- The two follow-ups to <leader>gb: review that commit here, or go read the
--- discussion around it. Both work off the blame for the cursor line, so the
--- float does not have to be open -- and on a line that already shows a hash
--- (fugitive log/blame, diffview's log panel) they use that hash instead.
+-- The follow-ups to <leader>gb: review that commit here, go read the
+-- discussion around it, or go through its PR in tuicr. All work off the blame
+-- for the cursor line, so the float does not have to be open -- and on a line
+-- that already shows a hash (fugitive log/blame, diffview's log panel) they
+-- use that hash instead.
 map("n", "<leader>go", function()
   local sha = require("util.git").commit_at_cursor()
   if sha then
@@ -65,6 +66,14 @@ map("n", "<leader>gO", function()
     git.browse_commit(sha)
   end
 end, { desc = "Open this line's PR on GitHub" })
+
+map("n", "<leader>gT", function()
+  local git = require("util.git")
+  local sha = git.commit_at_cursor()
+  if sha then
+    git.review_commit_pr(sha)
+  end
+end, { desc = "Open this line's PR in tuicr" })
 
 -- Blame the whole file in a side window, scrollbound to it. Unlike the float
 -- it is a real buffer you can move around in: `s`/`S`/`e` show the commit
@@ -173,6 +182,7 @@ map("n", "<leader>fg", "<cmd>Telescope live_grep<CR>", { desc = "Live grep" })
 map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
 map("n", "<leader>fd", "<cmd>Telescope diagnostics bufnr=0<CR>", { desc = "Buffer diagnostics" })
+map("n", "<leader>fq", "<cmd>QfList<CR>", { desc = "Saved quickfix lists" })
 map("n", "<leader>ds", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Document symbols" })
 map("n", "<leader>dm", function()
   require("telescope.builtin").lsp_document_symbols({ symbols = { "method", "function" } })

@@ -1,0 +1,31 @@
+# tuicr: code review in the terminal. Review a PR with `tuicr pr <n>` from
+# inside its worktree (`wt switch pr:<n>`); /review-pr in Claude Code opens it
+# that way too.
+
+# Same palette as Neovim and Ghostty.
+theme = "catppuccin-mocha"
+
+# `e` opens the file at the cursor's line. In a PR review run from the PR's
+# worktree that is the real file, so gd, grr and gm work.
+editor = "nvim"
+
+# Start with reviewed files hidden: `r` marks the file you're on and moves to
+# the next one left, and the header counts down what remains.
+show_reviewed = false
+
+show_pr_checks = true
+scroll_offset = 5
+username = "Mohit"
+
+# `tuicr -w` on Claude's uncommitted work picks up its edits as it makes them.
+diff_watch_interval_ms = 1000
+
+# Tab cycles these while writing a comment; the first is the default. On
+# :submit each comment goes to GitHub prefixed with its type, e.g. [NIT].
+comment_types = [
+	{ id = "suggestion", color = "#89b4fa", definition = "an improvement the author can take or leave" },
+	{ id = "question", color = "#f9e2af", definition = "something I don't understand yet" },
+	{ id = "issue", color = "#f38ba8", definition = "must be fixed before merge" },
+	{ id = "nit", color = "#7f849c", definition = "small and optional" },
+	{ id = "praise", color = "#a6e3a1", definition = "something done well" },
+]

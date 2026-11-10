@@ -72,5 +72,8 @@ return {
 			lualine_y = { "progress" },
 			lualine_z = { "location" },
 		},
+		-- The quickfix window's statusline shows the list's title, so a
+		-- walkthrough loaded with :qflist says which one it is.
+		extensions = { "quickfix" },
 	},
 }

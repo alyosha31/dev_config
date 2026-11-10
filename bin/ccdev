@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# A tmux session for one piece of work, in the current directory (usually a
+# worktree from `wt switch`), with three windows:
+#   claude  Claude Code, to talk through the task and get it done
+#   nvim    Neovim, to read the code
+#   review  a second, fresh Claude Code session, to review what the first did
+# Run it again from the same directory to get back to the session.
+
+SESSION="$(basename "$PWD" | tr '/.@:' '_')"
+PROJECT="$PWD"
+
+# `=` makes tmux match the name exactly; a bare name also matches any session
+# it is the start of, so `fulfil-io` would find `fulfil-io-sc-123-…`.
+if ! tmux has-session -t "=$SESSION" 2>/dev/null; then
+    # Each program is typed into a shell rather than run as the window's
+    # command, so quitting it leaves the window open at a prompt.
+    pane=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n claude -c "$PROJECT")
+    tmux send-keys -t "$pane" 'claude' C-m
+
+    pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$SESSION:" -n nvim -c "$PROJECT")
+    tmux send-keys -t "$pane" 'nvim .' C-m
+
+    pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$SESSION:" -n review -c "$PROJECT")
+    tmux send-keys -t "$pane" 'claude' C-m
+fi
+
+# Inside tmux, attaching would nest a second tmux in this pane; move this
+# client over to the session instead.
+if [ -n "$TMUX" ]; then
+    exec tmux switch-client -t "=$SESSION"
+fi
+exec tmux attach -t "=$SESSION"

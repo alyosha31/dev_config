@@ -1,0 +1,5 @@
+# Worktrunk (wt): git worktree management.
+
+# Worktrees sit beside the main checkout as <repo>-<branch>, the same as the
+# fulfil-io-<branch> folders made with plain git. The default is <repo>.<branch>.
+worktree-path = "{{ repo_path }}/../{{ repo }}-{{ branch | sanitize }}"

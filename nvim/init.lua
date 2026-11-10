@@ -162,3 +162,4 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 require("config.autocmds")
+require("fulfil").setup()

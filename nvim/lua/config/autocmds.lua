@@ -91,3 +91,24 @@ vim.api.nvim_create_user_command("GitKeys", function()
     vim.bo.modifiable = false
     vim.keymap.set("n", "q", "<cmd>tabclose<CR>", { buffer = 0, desc = "Close cheatsheet" })
 end, { desc = "Git keymap cheatsheet" })
+
+-- Saved quickfix lists, such as Claude's walkthroughs: :qflist or <leader>fq.
+vim.api.nvim_create_user_command("QfList", function()
+    require("util.qflists").pick()
+end, { desc = "Pick a saved quickfix list" })
+
+-- User commands must start with a capital, so :qflist is an abbreviation that
+-- becomes :QfList when it is the whole command line.
+vim.keymap.set("ca", "qflist", function()
+    if vim.fn.getcmdtype() == ":" and vim.fn.getcmdline() == "qflist" then
+        return "QfList"
+    end
+    return "qflist"
+end, { expr = true, desc = ":qflist runs :QfList" })
+
+-- Flash what was just yanked, so it's clear what `yi(` or `yap` actually took.
+vim.api.nvim_create_autocmd("TextYankPost", {
+    callback = function()
+        vim.hl.on_yank()
+    end,
+})

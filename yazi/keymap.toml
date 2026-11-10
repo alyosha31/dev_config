@@ -1,0 +1,8 @@
+# Esc closes Yazi, like every other float in Neovim. Out of the box Esc only
+# clears a selection, visual mode or a filter, and does nothing otherwise.
+# Only the file list changes: Esc still cancels the rename and search inputs
+# and the help menu, which have their own keymaps. Ctrl-c and q still quit.
+[mgr]
+prepend_keymap = [
+	{ on = "<Esc>", run = "quit", desc = "Quit" },
+]
