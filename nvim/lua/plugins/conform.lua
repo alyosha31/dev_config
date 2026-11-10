@@ -7,6 +7,7 @@ return {
 			c = { "clang_format" },
 			cpp = { "clang_format" },
 			go = { "gofmt", "goimports" },
+			rust = { "rustfmt" },
 			python = { "ruff_format" },
 			javascript = { "prettier" },
 			typescript = { "prettier" },

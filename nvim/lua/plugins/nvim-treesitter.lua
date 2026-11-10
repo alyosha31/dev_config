@@ -23,6 +23,8 @@ return {
 			"java",
 			"c",
 			"cpp",
+			"rust",
+			"toml",
 		}
 
 		require("nvim-treesitter").install(languages)

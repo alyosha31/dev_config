@@ -35,3 +35,6 @@ export PATH="$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.bash_secrets" ]; then
   . "$HOME/.bash_secrets"
 fi
+
+# Rust (rustup from Homebrew is keg-only; ~/.cargo/bin holds `cargo install` binaries)
+export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
