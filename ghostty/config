@@ -4,6 +4,9 @@
 
 # Catppuccin Mocha, to match tmux and Neovim.
 theme = Catppuccin Mocha
+# Plain text in Catppuccin's yellow instead of its usual off-white. Programs that
+# pick their own colours (Neovim, ls, prompts) are unaffected.
+foreground = #f9e2af
 
 # Diff backgrounds for 256-colour programs (lazygit, delta, tig): Catppuccin's
 # crust tinted towards green/red/yellow, matching Neovim's catppuccin diffs.
@@ -24,7 +27,10 @@ font-thicken = true
 
 # To switch pictures, swap which line is commented out, then reload the
 # config with Cmd+Shift+, (or open a new window).
-background-image = /Users/mg/dev_config/ghostty/backgrounds/night-drive-tokyo.png
+background-image = /Users/mg/dev_config/ghostty/backgrounds/rainy-drive-tokyo-vignette.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/rainy-drive-tokyo.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/night-drive-tokyo-vignette.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/night-drive-tokyo.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-drive-tokyo.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/neon-moonlit-seaside.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/moonlit-lake.png
@@ -32,7 +38,7 @@ background-image = /Users/mg/dev_config/ghostty/backgrounds/night-drive-tokyo.pn
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/waterfront-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-purple.png
-background-image-opacity = 0.32
+background-image-opacity = 0.23
 background-image-fit = cover
 
 # Tabs live in the titlebar, at the top.
