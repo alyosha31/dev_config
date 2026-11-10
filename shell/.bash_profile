@@ -38,3 +38,6 @@ fi
 
 # Rust (rustup from Homebrew is keg-only; ~/.cargo/bin holds `cargo install` binaries)
 export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
+
+# Worktrunk: lets `wt switch` cd the shell into the worktree
+if command -v wt >/dev/null 2>&1; then eval "$(wt config shell init bash)"; fi
