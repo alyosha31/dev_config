@@ -27,7 +27,9 @@ font-thicken = true
 
 # To switch pictures, swap which line is commented out, then reload the
 # config with Cmd+Shift+, (or open a new window).
-background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway-vignette.png
+background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway-fast-vignette.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway-fast.png
+# background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway-vignette.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/rainy-drive-tokyo-vignette.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/rainy-drive-tokyo.png
