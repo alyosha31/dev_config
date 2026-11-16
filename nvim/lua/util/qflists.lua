@@ -39,6 +39,42 @@ local function age(mtime)
 	return math.floor(seconds / 86400) .. "d ago"
 end
 
+-- Print "(3 of 9): <note>" for the current stop, cut to fit on one line so it
+-- never asks you to press Enter. Redraw first: jumping to another file
+-- repaints the screen, which would wipe a message printed before it.
+local function show_stop()
+	local list = vim.fn.getqflist({ idx = 0, size = 0 })
+	local item = vim.fn.getqflist({ idx = list.idx, items = 0 }).items[1]
+	if not item then
+		return
+	end
+	local message = ("(%d of %d): %s"):format(list.idx, list.size, item.text)
+	vim.cmd.redraw()
+	vim.api.nvim_echo({ { vim.fn.strcharpart(message, 0, math.max(vim.v.echospace, 1)) } }, false, {})
+end
+
+local function jump(cmd, count)
+	local ok, err = pcall(vim.cmd, { cmd = cmd, count = count })
+	if not ok then
+		vim.notify(err:match("E%d+: .*") or err, vim.log.levels.WARN)
+		return
+	end
+	show_stop()
+end
+
+-- Step through the current quickfix list with a count, as ]q and [q do, and
+-- print the stop's note. Neovim's own ]q and [q move without printing it, so a
+-- walkthrough's note stayed on the first stop.
+function M.step(cmd)
+	jump(cmd, vim.v.count1)
+end
+
+-- <CR> in the quickfix window: open the stop under the cursor, as the built-in
+-- <CR> does, and print its note, which the built-in one doesn't either.
+function M.open_under_cursor()
+	jump("cc", vim.fn.line("."))
+end
+
 -- Make a saved list the current quickfix list, open the quickfix window, and
 -- put the cursor on the first stop. ]q and [q step from there.
 function M.load(path)
@@ -50,6 +86,7 @@ function M.load(path)
 	end
 	vim.cmd("botright copen")
 	vim.cmd.wincmd("p")
+	show_stop()
 end
 
 -- Pick one of this checkout's saved lists, newest first, with its stops in

@@ -22,6 +22,16 @@ function M.base_rev()
 	end
 end
 
+-- The commit this branch started from: where it split off base_rev(), as a
+-- short hash. Diffing against it shows only this branch's work, even after the
+-- base branch has moved on; diffing against base_rev() itself would also show
+-- everything merged there since, as if this branch had undone it.
+function M.branch_start()
+	local base = M.base_rev()
+	local sha = base and first_line({ "git", "merge-base", base, "HEAD" })
+	return sha and first_line({ "git", "rev-parse", "--short", sha })
+end
+
 -- The commit that last touched the cursor line. Blames the buffer as it is
 -- now, not the file on disk, so unsaved edits above the cursor do not shift
 -- the line. On a fugitive or diffview line that already shows a hash, that

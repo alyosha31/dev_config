@@ -96,52 +96,27 @@ map({ "o", "x" }, "ah", "<cmd>Gitsigns select_hunk<CR>", { desc = "Around hunk" 
 map("n", "]h", "<cmd>Gitsigns nav_hunk next<CR>", { desc = "Next Git hunk" })
 map("n", "[h", "<cmd>Gitsigns nav_hunk prev<CR>", { desc = "Previous Git hunk" })
 
--- Draw the diff in the file itself: changed lines get a green background, the
--- changed words within them a brighter green, and removed lines appear in
--- place as red virtual lines. Compares against whatever base is set, falling
--- back to the previous commit, and restores that base when toggled off.
-local inline_diff = { on = false, base = nil }
-
--- `target` nil means the index, so the diff is only the unstaged changes.
-local function toggle_inline_diff(target)
-  local gs = require("gitsigns")
-
-  inline_diff.on = not inline_diff.on
-
-  if inline_diff.on then
-    inline_diff.base = require("gitsigns.config").config.base
-    gs.change_base(target, true)
-  else
-    gs.change_base(inline_diff.base, true)
-  end
-
-  gs.toggle_linehl(inline_diff.on)
-  gs.toggle_word_diff(inline_diff.on)
-  gs.toggle_deleted(inline_diff.on)
-
-  vim.notify("inline diff " .. (inline_diff.on and ("vs " .. (target or "index")) or "off"))
-end
-
+-- Plain gitsigns: highlight the changed lines and words in the file. It shows
+-- the same changes the signs do, which are `git diff`'s unless <leader>gB set
+-- another base. Removed lines: <leader>gP on the hunk.
 map("n", "<leader>gi", function()
-  toggle_inline_diff(require("gitsigns.config").config.base or "HEAD~1")
-end, { desc = "Toggle inline diff in the file" })
-
-map("n", "<leader>gI", function()
-  toggle_inline_diff(nil)
-end, { desc = "Toggle inline diff of unstaged changes" })
+  local gs = require("gitsigns")
+  gs.toggle_word_diff(gs.toggle_linehl())
+end, { desc = "Toggle changed-line highlights" })
 
 -- One hunk, inline, without turning the whole mode on.
 map("n", "<leader>gP", "<cmd>Gitsigns preview_hunk_inline<CR>", { desc = "Preview hunk inline" })
 
 -- Review a commit or a whole branch inside the real files: point gitsigns at
 -- another revision and its changes show as signs in the buffer on disk, where
--- gd/gr and treesitter still work. Empty input resets to the index.
+-- gd/gr and treesitter still work. It fills in the commit this branch started
+-- from, so Enter shows the branch's own work; empty input resets to the index.
 map("n", "<leader>gB", function()
   local gs = require("gitsigns")
 
   vim.ui.input({
     prompt = "Gitsigns diff base (empty resets to index): ",
-    default = require("util.git").base_rev() or "HEAD~1",
+    default = require("util.git").branch_start() or "HEAD~1",
   }, function(rev)
     if rev == nil then
       return
@@ -182,6 +157,13 @@ map("n", "<leader>fg", "<cmd>Telescope live_grep<CR>", { desc = "Live grep" })
 map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
 map("n", "<leader>fq", "<cmd>QfList<CR>", { desc = "Saved quickfix lists" })
+-- Neovim's own ]q and [q, but printing each stop's note as they move.
+map("n", "]q", function()
+  require("util.qflists").step("cnext")
+end, { desc = "Next quickfix stop" })
+map("n", "[q", function()
+  require("util.qflists").step("cprevious")
+end, { desc = "Previous quickfix stop" })
 map("n", "<leader>ds", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Document symbols" })
 map("n", "<leader>dm", function()
   require("telescope.builtin").lsp_document_symbols({ symbols = { "method", "function" } })

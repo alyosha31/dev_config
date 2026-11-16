@@ -97,6 +97,20 @@ vim.api.nvim_create_user_command("QfList", function()
     require("util.qflists").pick()
 end, { desc = "Pick a saved quickfix list" })
 
+-- <CR> in the quickfix window prints the stop's note, as ]q and [q do.
+-- Location lists keep the built-in <CR>.
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "qf",
+    callback = function(args)
+        if vim.fn.win_gettype() ~= "quickfix" then
+            return
+        end
+        vim.keymap.set("n", "<CR>", function()
+            require("util.qflists").open_under_cursor()
+        end, { buffer = args.buf, desc = "Open this stop and show its note" })
+    end,
+})
+
 -- User commands must start with a capital, so :qflist is an abbreviation that
 -- becomes :QfList when it is the whole command line.
 vim.keymap.set("ca", "qflist", function()

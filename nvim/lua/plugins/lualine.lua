@@ -5,7 +5,9 @@ return {
 	},
 	opts = {
 		options = {
-			theme = "catppuccin",
+			-- catppuccin names its lualine theme "catppuccin-nvim"; it follows
+			-- the flavour set in plugins/catppuccin.lua.
+			theme = "catppuccin-nvim",
 			-- lualine only redraws when one of these events fires; the
 			-- interval below is just a backstop. Its default event list
 			-- leaves out everything this statusline actually shows, so

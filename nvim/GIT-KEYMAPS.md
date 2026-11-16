@@ -18,7 +18,7 @@ buffer's own help.
 | `<leader>gq` | Close the diffview — panel and every split, in one go |
 | `<leader>gD` | Fugitive: split-diff this file against a revision (prompts) |
 | `<leader>gE` | Fugitive: open this file as it was at a revision (prompts) |
-| `<leader>gB` | Point gitsigns at another revision (prompts, empty = reset) |
+| `<leader>gB` | Point gitsigns at another revision (prompts; filled in with where your branch started, so Enter = your branch's changes; empty = reset) |
 | `<leader>g?` | This file |
 
 ## Hunks in an ordinary buffer — gitsigns
@@ -29,8 +29,7 @@ and treesitter are intact.
 | Key | Does |
 | --- | --- |
 | `]h` / `[h` | Next / previous hunk |
-| `<leader>gi` | **Inline diff in the file** — changed lines green, removed lines back in place in red. Toggles |
-| `<leader>gI` | Same inline diff, but only the unstaged changes (against the index). Toggles |
+| `<leader>gi` | Highlight the changed lines and words in the file (plain gitsigns, same changes as the signs). Toggles |
 | `<leader>gp` | Preview the hunk in a float |
 | `<leader>gP` | Preview one hunk inline, without turning the whole mode on |
 | `<leader>gs` | Stage the hunk — in visual mode, only the selected lines |

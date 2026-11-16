@@ -62,16 +62,7 @@ return {
 				DiffText = { bg = blend(C.yellow, C.crust, 0.35), bold = true },
 				DiffDelete = { link = "GitDiffFiller" },
 
-				-- gitsigns' in-file diff (<leader>gi) in the same colours.
-				GitSignsAddLn = { link = "GitDiffAdded" },
-				GitSignsChangeLn = { link = "GitDiffAdded" },
-				GitSignsDeleteLn = { link = "GitDiffRemoved" },
-				GitSignsAddInline = { link = "GitDiffAddedText" },
-				GitSignsChangeInline = { link = "GitDiffAddedText" },
-				GitSignsDeleteInline = { link = "GitDiffRemovedText" },
-				GitSignsDeleteVirtLn = { link = "GitDiffRemoved" },
-				GitSignsDeleteVirtLnInLine = { link = "GitDiffRemovedText" },
-				GitSignsVirtLnum = { fg = C.overlay0, bg = removed },
+				-- gitsigns keeps catppuccin's own colours: no GitSigns* overrides.
 			}
 		end,
 	},
