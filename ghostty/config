@@ -42,7 +42,7 @@ background-image = /Users/mg/dev_config/ghostty/backgrounds/midnight-highway-fas
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/waterfront-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-retro.png
 # background-image = /Users/mg/dev_config/ghostty/backgrounds/bay-night-purple.png
-background-image-opacity = 0.23
+background-image-opacity = 0.15
 background-image-fit = cover
 
 # Tabs live in the titlebar, at the top.
