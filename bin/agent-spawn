@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+# Start a conductor worker or reviewer. The master (the conductor skill) runs
+# this, so the git and tmux steps happen the same way every time.
+#
+#   agent-spawn worker <session> <slug> <base> <brief-file> [--add-dir <dir>]...
+#       Run from the repo. Makes the worktree <repo>-<slug> beside the main
+#       checkout, on a new branch <slug> from <base> (origin/develop, or
+#       another worker's branch), opens tmux window <slug> in <session> there,
+#       and starts `claude -n <slug>` with the brief as its first message.
+#
+#   agent-spawn review <worker-pane> <worktree> <range> <brief-file>
+#       In the worker's window: tuicr on <range> across the bottom, and
+#       `claude -n <slug>-review` with the brief at the top right.
+#           ┌──────────┬──────────┐
+#           │ worker   │ review   │
+#           ├──────────┴──────────┤
+#           │ tuicr -r <range>    │
+#           └─────────────────────┘
+#
+# Both print the new panes (and the worktree) as key=value lines for the
+# master's stack.json.
+#
+# Claude starts in auto mode, like the master: a session holds messages from
+# a session in another permission mode until its user approves them.
+# AGENT_SPAWN_MODE overrides it.
+
+set -euo pipefail
+
+mode=${AGENT_SPAWN_MODE:-auto}
+
+die() {
+    echo "agent-spawn: $*" >&2
+    exit 1
+}
+
+# Absolute path of a readable file: the agent's shell reads it, from its own
+# directory.
+brief_path() {
+    [ -r "$1" ] || die "can't read brief $1"
+    echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+}
+
+# The command typed into a new pane. The pane's shell expands "$(cat brief)",
+# so the brief becomes the agent's first message word for word, with no
+# quoting to get wrong and no file for the agent to ask permission to read.
+claude_cmd() {
+    local name=$1 brief=$2
+    shift 2
+    local cmd="claude -n $(printf %q "$name") --permission-mode $(printf %q "$mode")"
+    for dir in "$@"; do
+        cmd+=" --add-dir $(printf %q "$dir")"
+    done
+    echo "$cmd \"\$(cat $(printf %q "$brief"))\""
+}
+
+worker() {
+    [ $# -ge 4 ] || die "usage: agent-spawn worker <session> <slug> <base> <brief-file> [--add-dir <dir>]..."
+    local session=$1 slug=$2 base=$3 brief
+    brief=$(brief_path "$4")
+    shift 4
+    local add_dirs=()
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --add-dir) [ $# -ge 2 ] || die "--add-dir needs a directory"; add_dirs+=("$2"); shift 2 ;;
+            *) die "unknown option $1" ;;
+        esac
+    done
+
+    # The slug is the branch, the worktree's suffix, the window and the
+    # worker's name, so keep it to characters all four take as they are.
+    [[ $slug =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die "slug must be letters, digits, . _ - : $slug"
+    tmux has-session -t "=$session" 2>/dev/null || die "no tmux session $session"
+
+    # The main checkout, even when this runs from one of its worktrees: the
+    # parent of the shared .git directory.
+    local main
+    main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)") ||
+        die "not inside a git checkout"
+    [ -d "$main/.git" ] || die "can't find the main checkout (bare repo?)"
+
+    # Beside the main checkout as <repo>-<slug>, like worktrunk's
+    # worktree-path and the fulfil-io-<branch> folders.
+    local wt
+    wt="$(dirname "$main")/$(basename "$main")-$slug"
+    [ -e "$wt" ] && die "$wt already exists"
+
+    # A remote base like origin/develop is fetched so the worker starts from
+    # the latest. A local base is another worker's branch, current already.
+    if [[ $base == */* ]] && git -C "$main" rev-parse --verify --quiet "refs/remotes/$base" >/dev/null; then
+        git -C "$main" fetch --quiet "${base%%/*}" "${base#*/}"
+    fi
+
+    # --no-track: a branch made from origin/develop would otherwise track it,
+    # and its first plain `git push` would aim at develop.
+    git -C "$main" worktree add --quiet --no-track -b "$slug" "$wt" "$base"
+
+    # Claude's per-checkout settings are gitignored, so a new worktree starts
+    # without them. Link the main checkout's, but only when git ignores the
+    # path here too: a link that showed up in `git status` would get committed.
+    local settings=.claude/settings.local.json
+    if [ -f "$main/$settings" ] && [ ! -e "$wt/$settings" ] && git -C "$wt" check-ignore -q "$settings"; then
+        mkdir -p "$wt/.claude"
+        ln -s "$main/$settings" "$wt/$settings"
+    fi
+
+    local pane
+    pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$session:" -n "$slug" -c "$wt")
+    # Typed into a shell rather than run as the window's command, so the
+    # window stays open at a prompt if Claude exits.
+    tmux send-keys -t "$pane" "$(claude_cmd "$slug" "$brief" ${add_dirs[@]+"${add_dirs[@]}"})" C-m
+
+    echo "worktree=$wt"
+    echo "pane=$pane"
+}
+
+review() {
+    [ $# -eq 4 ] || die "usage: agent-spawn review <worker-pane> <worktree> <range> <brief-file>"
+    local worker_pane=$1 wt=$2 range=$3 brief
+    brief=$(brief_path "$4")
+
+    tmux display-message -p -t "$worker_pane" '#{pane_id}' >/dev/null 2>&1 || die "no tmux pane $worker_pane"
+    [ -d "$wt" ] || die "no worktree $wt"
+    local slug
+    slug=$(tmux display-message -p -t "$worker_pane" '#{window_name}')
+
+    # tuicr first, across the whole width (-f), then the reviewer split off
+    # the worker's pane, which by then is only the top half: the top row
+    # becomes worker | review and tuicr keeps the full bottom. Every split
+    # names its pane, so it lands in this window whichever one you're
+    # looking at, and -d leaves your focus where it is.
+    local tuicr_pane review_pane
+    tuicr_pane=$(tmux split-window -d -v -f -l 50% -P -F '#{pane_id}' -t "$worker_pane" -c "$wt")
+    tmux send-keys -t "$tuicr_pane" "tuicr -r $(printf %q "$range")" C-m
+
+    review_pane=$(tmux split-window -d -h -l 50% -P -F '#{pane_id}' -t "$worker_pane" -c "$wt")
+    tmux send-keys -t "$review_pane" "$(claude_cmd "$slug-review" "$brief")" C-m
+
+    echo "tuicr_pane=$tuicr_pane"
+    echo "review_pane=$review_pane"
+}
+
+case ${1:-} in
+    worker) shift; worker "$@" ;;
+    review) shift; review "$@" ;;
+    *) die "usage: agent-spawn worker|review ... (see the comment at the top of $0)" ;;
+esac

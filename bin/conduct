@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+# Start, or get back to, a conductor session for the repo you're in: a tmux
+# session whose window 0 is the master, a Claude Code that scopes a feature
+# with you, splits it into pieces, and then runs one worker Claude per piece,
+# each in its own worktree and tmux window. How the master works is in the
+# conductor skill (~/.claude/skills/conductor).
+#
+#   conduct [name]    name defaults to the repo's folder name
+#
+# Run it again with the same name to get back to the session.
+
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "conduct: not inside a git checkout, cd into the repo first" >&2
+    exit 1
+}
+
+# tmux session names can't hold . or :, and the name is reused for the
+# master's Claude session, which workers message by name: keep it plain.
+name=$(printf '%s' "${1:-$(basename "$root")}" | tr -c 'A-Za-z0-9_-' '-')
+master="$name-master"
+
+# `=` makes tmux match the name exactly; a bare name also matches any session
+# it is the start of.
+if ! tmux has-session -t "=$name" 2>/dev/null; then
+    pane=$(tmux new-session -d -P -F '#{pane_id}' -s "$name" -n master -c "$root")
+    # Plan mode lets the master read the code while you scope the feature,
+    # but not create worktrees or windows until you approve the plan.
+    prompt="You are the master of the conductor session $name, and your Claude session name is $master. Load the conductor skill, then wait for me to describe the feature."
+    # Typed into a shell rather than run as the window's command, so quitting
+    # Claude leaves the window open at a prompt.
+    tmux send-keys -t "$pane" "claude -n $(printf %q "$master") --permission-mode plan $(printf %q "$prompt")" C-m
+fi
+
+# Inside tmux, attaching would nest a second tmux in this pane; move this
+# client over to the session instead.
+if [ -n "${TMUX:-}" ]; then
+    exec tmux switch-client -t "=$name"
+fi
+exec tmux attach -t "=$name"
