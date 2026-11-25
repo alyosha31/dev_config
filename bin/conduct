@@ -1,37 +1,70 @@
 #!/usr/bin/env bash
 
-# Start, or get back to, a conductor session for the repo you're in: a tmux
-# session whose window 0 is the master, a Claude Code that scopes a feature
-# with you, splits it into pieces, and then runs one worker Claude per piece,
-# each in its own worktree and tmux window. How the master works is in the
-# conductor skill (~/.claude/skills/conductor).
+# Start, or get back to, a conductor session: a tmux session whose window 0 is
+# the master, a Claude Code that runs other Claude Codes in the windows after
+# it.
 #
-#   conduct [name]    name defaults to the repo's folder name
+#   conduct [name]
+#       For the repo you're in. The master scopes a feature with you, splits
+#       it into pieces and runs one worker per piece, each in its own worktree
+#       and window (the conductor skill, ~/.claude/skills/conductor). name
+#       defaults to the repo's folder name.
+#
+#   conduct --reviews [name]
+#       From the folder your checkouts are under (~/Development, say). The
+#       master starts a reviewer per PR you give it, each in the PR's worktree
+#       and its own window, and keeps track of them while you work with each
+#       reviewer directly (the review-conductor skill). It has Remote Control
+#       on, so claude.ai and the Claude app can reach it too. name defaults
+#       to "reviews".
 #
 # Run it again with the same name to get back to the session.
 
 set -euo pipefail
 
-root=$(git rev-parse --show-toplevel 2>/dev/null) || {
-    echo "conduct: not inside a git checkout, cd into the repo first" >&2
-    exit 1
-}
+reviews=
+if [ "${1:-}" = --reviews ]; then
+    reviews=1
+    shift
+fi
+
+if [ -n "$reviews" ]; then
+    root=$PWD
+    default_name=reviews
+else
+    root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+        echo "conduct: not inside a git checkout, cd into the repo first (or use --reviews)" >&2
+        exit 1
+    }
+    default_name=$(basename "$root")
+fi
 
 # tmux session names can't hold . or :, and the name is reused for the
 # master's Claude session, which workers message by name: keep it plain.
-name=$(printf '%s' "${1:-$(basename "$root")}" | tr -c 'A-Za-z0-9_-' '-')
+name=$(printf '%s' "${1:-$default_name}" | tr -c 'A-Za-z0-9_-' '-')
 master="$name-master"
 
 # `=` makes tmux match the name exactly; a bare name also matches any session
 # it is the start of.
 if ! tmux has-session -t "=$name" 2>/dev/null; then
     pane=$(tmux new-session -d -P -F '#{pane_id}' -s "$name" -n master -c "$root")
-    # Plan mode lets the master read the code while you scope the feature,
-    # but not create worktrees or windows until you approve the plan.
-    prompt="You are the master of the conductor session $name, and your Claude session name is $master. Load the conductor skill, then wait for me to describe the feature."
+    if [ -n "$reviews" ]; then
+        # Auto mode from the start: there's no plan to approve, and reviewers
+        # run in auto mode too (a session holds messages from a session in
+        # another mode until its user approves them). --remote-control gets
+        # the name spelled out, or it would take the prompt as its name.
+        prompt="You are the review master of the tmux session $name, and your Claude session name is $master. Load the review-conductor skill, then wait for PRs to review."
+        cmd="claude -n $(printf %q "$master") --remote-control $(printf %q "$master") --permission-mode auto $(printf %q "$prompt")"
+    else
+        # Plan mode lets the master read the code while you scope the
+        # feature, but not create worktrees or windows until you approve the
+        # plan.
+        prompt="You are the master of the conductor session $name, and your Claude session name is $master. Load the conductor skill, then wait for me to describe the feature."
+        cmd="claude -n $(printf %q "$master") --permission-mode plan $(printf %q "$prompt")"
+    fi
     # Typed into a shell rather than run as the window's command, so quitting
     # Claude leaves the window open at a prompt.
-    tmux send-keys -t "$pane" "claude -n $(printf %q "$master") --permission-mode plan $(printf %q "$prompt")" C-m
+    tmux send-keys -t "$pane" "$cmd" C-m
 fi
 
 # Inside tmux, attaching would nest a second tmux in this pane; move this

@@ -43,20 +43,22 @@ and push with `git push --force-with-lease`: every commit lands on
 Commit as you normally would.
 
 - First push: `git push -u origin {{slug}}`, then open a draft PR against
-  {{default_branch}} with `gh pr create --draft --base {{default_branch}}`,
+  {{default_branch}} on {{repo}} with
+  `gh pr create --draft --repo {{repo}} --base {{default_branch}} --head {{head}}`,
   following the repo's PR conventions.
+- Every `gh` command about the PR gets `--repo {{repo}}`.
 - A piece stacked on another piece: its PR shows the parent's commits too until
   the parent merges. That's expected.
 - Never mark the PR ready, merge it, or comment on GitHub.
 
 ## CI
 
-After every push, watch CI in the background: `gh pr checks <n> --watch --fail-fast`.
+After every push, watch CI in the background: `gh pr checks <n> --repo {{repo}} --watch --fail-fast`.
 When it finishes:
 
 - green: report `ci {{slug}} green`
 - red: report `ci {{slug}} red: <one line>`, read the failure with
-  `gh run view <run-id> --log-failed`, fix it, push, and watch again
+  `gh run view <run-id> --repo {{repo}} --log-failed`, fix it, push, and watch again
 
 ## Reporting to the master
 

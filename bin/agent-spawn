@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Start a conductor worker or reviewer. The master (the conductor skill) runs
-# this, so the git and tmux steps happen the same way every time.
+# Start a conductor worker or reviewer. The master (the conductor or
+# review-conductor skill) runs this, so the git and tmux steps happen the same
+# way every time.
 #
 #   agent-spawn worker <session> <slug> <base> <brief-file> [--add-dir <dir>]...
 #       Run from the repo. Makes the worktree <repo>-<slug> beside the main
@@ -18,8 +19,25 @@
 #           │ tuicr -r <range>    │
 #           └─────────────────────┘
 #
-# Both print the new panes (and the worktree) as key=value lines for the
-# master's stack.json.
+#   agent-spawn pr-review <session> <checkout> <owner/repo#N> <brief-file>
+#       A PR, for the review-conductor. Uses the worktree already on the PR's
+#       branch (your own PR, say), or checks the PR out with `wt switch` from
+#       <checkout> (any checkout of the repo), and opens tmux window
+#       <repo>-<N> in <session>: `claude -n <repo>-<N>-review` with the brief
+#       on top, `tuicr pr <owner/repo#N>` across the bottom.
+#           ┌─────────────────────┐
+#           │ reviewer            │
+#           ├─────────────────────┤
+#           │ tuicr pr …#N        │
+#           └─────────────────────┘
+#
+#   agent-spawn open <session> <name> <dir> <command> [args...]
+#       For the user: a window <name> in <session> running <command> in
+#       <dir> (nvim, tuicr), and switches the session to it. If a window
+#       <name> is already open, switches to that one instead.
+#
+# Each prints the new panes (and the worktree) as key=value lines for the
+# master's state file.
 #
 # Claude starts in auto mode, like the master: a session holds messages from
 # a session in another permission mode until its user approves them.
@@ -51,7 +69,31 @@ claude_cmd() {
     for dir in "$@"; do
         cmd+=" --add-dir $(printf %q "$dir")"
     done
-    echo "$cmd \"\$(cat $(printf %q "$brief"))\""
+    # `--` ends the options: --add-dir takes any number of directories, and
+    # without it the brief would be read as one more.
+    echo "$cmd -- \"\$(cat $(printf %q "$brief"))\""
+}
+
+# The main checkout of the repo <dir> is in, even when <dir> is one of its
+# worktrees: the parent of the shared .git directory.
+main_checkout() {
+    local main
+    main=$(dirname "$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)") ||
+        die "$1 isn't inside a git checkout"
+    [ -d "$main/.git" ] || die "can't find the main checkout of $1 (bare repo?)"
+    echo "$main"
+}
+
+# Claude's per-checkout settings are gitignored, so a new worktree starts
+# without them. Link the main checkout's, but only when git ignores the path
+# in the worktree too: a link that showed up in `git status` would get
+# committed.
+link_settings() {
+    local main=$1 wt=$2 settings=.claude/settings.local.json
+    if [ -f "$main/$settings" ] && [ ! -e "$wt/$settings" ] && git -C "$wt" check-ignore -q "$settings"; then
+        mkdir -p "$wt/.claude"
+        ln -s "$main/$settings" "$wt/$settings"
+    fi
 }
 
 worker() {
@@ -72,12 +114,8 @@ worker() {
     [[ $slug =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die "slug must be letters, digits, . _ - : $slug"
     tmux has-session -t "=$session" 2>/dev/null || die "no tmux session $session"
 
-    # The main checkout, even when this runs from one of its worktrees: the
-    # parent of the shared .git directory.
     local main
-    main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)") ||
-        die "not inside a git checkout"
-    [ -d "$main/.git" ] || die "can't find the main checkout (bare repo?)"
+    main=$(main_checkout .)
 
     # Beside the main checkout as <repo>-<slug>, like worktrunk's
     # worktree-path and the fulfil-io-<branch> folders.
@@ -94,15 +132,7 @@ worker() {
     # --no-track: a branch made from origin/develop would otherwise track it,
     # and its first plain `git push` would aim at develop.
     git -C "$main" worktree add --quiet --no-track -b "$slug" "$wt" "$base"
-
-    # Claude's per-checkout settings are gitignored, so a new worktree starts
-    # without them. Link the main checkout's, but only when git ignores the
-    # path here too: a link that showed up in `git status` would get committed.
-    local settings=.claude/settings.local.json
-    if [ -f "$main/$settings" ] && [ ! -e "$wt/$settings" ] && git -C "$wt" check-ignore -q "$settings"; then
-        mkdir -p "$wt/.claude"
-        ln -s "$main/$settings" "$wt/$settings"
-    fi
+    link_settings "$main" "$wt"
 
     local pane
     pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$session:" -n "$slug" -c "$wt")
@@ -140,8 +170,126 @@ review() {
     echo "review_pane=$review_pane"
 }
 
+pr_review() {
+    [ $# -eq 4 ] || die "usage: agent-spawn pr-review <session> <checkout> <owner/repo#N> <brief-file>"
+    local session=$1 checkout=$2 target=$3 brief
+    brief=$(brief_path "$4")
+
+    # The PR by its repo as well as its number: in a clone of a fork, a bare
+    # number could be looked up in the fork.
+    [[ $target =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]] || die "the PR must be owner/repo#N: $target"
+    local repo=${target%#*} pr=${target##*#}
+    local url="https://github.com/$repo/pull/$pr"
+    tmux has-session -t "=$session" 2>/dev/null || die "no tmux session $session"
+    command -v wt >/dev/null || die "needs worktrunk (wt) to check out PRs"
+
+    local main window
+    main=$(main_checkout "$checkout")
+    window="$(basename "$main")-$pr"
+    if tmux list-windows -t "=$session" -F '#{window_name}' | grep -qxF "$window"; then
+        die "window $window is already open in $session"
+    fi
+
+    # The PR's branch may be checked out here already, the user's own PR
+    # say: review it in that worktree. wt wouldn't share it, it would make a
+    # second copy of the branch under a prefixed name. It counts as the PR's
+    # branch when it pushes to, or tracks, the PR's head repo.
+    local info head_branch head_repo wt="" created=no
+    info=$(gh pr view "$url" --json headRefName,headRepositoryOwner,headRepository \
+        --jq '"\(.headRefName) \(.headRepositoryOwner.login)/\(.headRepository.name)"') ||
+        die "can't look up $target"
+    read -r head_branch head_repo <<<"$info"
+    local on_branch
+    on_branch=$(git -C "$main" worktree list --porcelain |
+        awk -v b="branch refs/heads/$head_branch" '/^worktree /{p=substr($0,10)} $0==b{print p; exit}')
+    if [ -n "$on_branch" ]; then
+        local remote urls
+        remote=$(git -C "$main" config "branch.$head_branch.remote" || true)
+        urls="$(git -C "$main" config "branch.$head_branch.pushremote" || true) $(
+            [ -n "$remote" ] && git -C "$main" remote get-url "$remote" 2>/dev/null || true)"
+        if [[ $(tr 'A-Z' 'a-z' <<<"$urls") == *"$(tr 'A-Z' 'a-z' <<<"$head_repo")"* ]]; then
+            wt=$on_branch
+        fi
+    fi
+
+    if [ -z "$wt" ]; then
+        # Whether the worktree is new, so the master's cleanup removes only
+        # worktrees made here and never someone's work in progress. Compared
+        # as real paths: git and wt can spell the same folder differently.
+        local before
+        before=$(git -C "$main" worktree list --porcelain | sed -n 's/^worktree //p' |
+            while IFS= read -r p; do (cd "$p" 2>/dev/null && pwd -P) || true; done)
+
+        # wt fetches the PR, forks included, and checks it out beside the
+        # main checkout as <repo>-<branch>, or finds the worktree it made for
+        # the PR before. -x runs pwd there, which prints the path; wt's own
+        # messages, git's checkout progress among them, go to stderr and are
+        # shown only if it fails. --no-hooks: this is someone else's code, so
+        # none of the repo's hooks.
+        local log
+        log=$(mktemp)
+        if ! wt=$(wt -C "$main" switch "$url" --no-cd --no-hooks -x pwd -- -P 2>"$log"); then
+            cat "$log" >&2
+            rm -f "$log"
+            die "wt couldn't check out $target"
+        fi
+        rm -f "$log"
+        [ -d "$wt" ] || die "wt didn't give a worktree for $target: $wt"
+        if ! grep -qxF "$wt" <<<"$before"; then
+            created=yes
+            link_settings "$main" "$wt"
+        fi
+    fi
+
+    # tuicr first, so the PR's review is there by the time review-pr looks
+    # for it, and review-pr doesn't open a second one.
+    local pane tuicr_pane
+    pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$session:" -n "$window" -c "$wt")
+    tuicr_pane=$(tmux split-window -d -v -f -l 50% -P -F '#{pane_id}' -t "$pane" -c "$wt")
+    tmux send-keys -t "$tuicr_pane" "tuicr pr $(printf %q "$target")" C-m
+    tmux send-keys -t "$pane" "$(claude_cmd "$window-review" "$brief")" C-m
+
+    echo "worktree=$wt"
+    echo "created=$created"
+    echo "window=$window"
+    echo "pane=$pane"
+    echo "tuicr_pane=$tuicr_pane"
+}
+
+open_window() {
+    [ $# -ge 4 ] || die "usage: agent-spawn open <session> <name> <dir> <command> [args...]"
+    local session=$1 name=$2 dir=$3
+    shift 3
+    tmux has-session -t "=$session" 2>/dev/null || die "no tmux session $session"
+    [ -d "$dir" ] || die "no directory $dir"
+
+    # Asked twice for the same thing, go back to the window from the first
+    # time rather than open a second nvim, or a second tuicr writing the
+    # same review.
+    local existing
+    existing=$(tmux list-windows -t "=$session" -F '#{window_id} #{window_name}' |
+        awk -v n="$name" '$2 == n { print $1; exit }')
+    if [ -n "$existing" ]; then
+        tmux select-window -t "$existing"
+        echo "pane=$(tmux display-message -p -t "$existing" '#{pane_id}')"
+        echo "existing=yes"
+        return
+    fi
+
+    # No -d: the user asked to see it, so the session switches to the new
+    # window. Typed into a shell, like the agents, so the command gets the
+    # shell's full environment, and quitting it leaves a prompt there.
+    local pane
+    pane=$(tmux new-window -P -F '#{pane_id}' -t "=$session:" -n "$name" -c "$dir")
+    tmux send-keys -t "$pane" "$(printf '%q ' "$@")" C-m
+    echo "pane=$pane"
+    echo "existing=no"
+}
+
 case ${1:-} in
     worker) shift; worker "$@" ;;
     review) shift; review "$@" ;;
-    *) die "usage: agent-spawn worker|review ... (see the comment at the top of $0)" ;;
+    pr-review) shift; pr_review "$@" ;;
+    open) shift; open_window "$@" ;;
+    *) die "usage: agent-spawn worker|review|pr-review|open ... (see the comment at the top of $0)" ;;
 esac

@@ -27,19 +27,22 @@ window 1+  one per piece         ┌────────┬─────�
 - Never ask a worker or reviewer to do something your own permissions would
   block, or that the user turned down.
 - Talk to agents with `SendMessage`, by name, and see them with `ListAgents`.
-  Use tmux only through `agent-spawn`, to read a window's `@agent` flag, or to
-  look at a pane (`tmux capture-pane -p -t <pane>`) when an agent seems stuck.
-  Never type into an agent's pane.
+  Use tmux only through `agent-spawn`, to read a window's `@agent` flag, to
+  look at a pane (`tmux capture-pane -p -t <pane>`) when an agent seems stuck,
+  or to take the user to a window (section 9). Never type into an agent's
+  pane.
 - Never poll. To hear when an agent finishes something you asked for, send
   with `notify_when_idle: true`.
 - Keep `stack.json` current after every change: it is what you go back to
   after a compaction or a restart.
 
-Names, all derived from the tmux session (`tmux display-message -p -t "$TMUX_PANE" '#S'`):
+Names. The session is your tmux session
+(`tmux display-message -p -t "$TMUX_PANE" '#S'`); if `$TMUX_PANE` is empty
+you aren't in tmux and can't open windows: say so and stop.
 
 | | |
 |---|---|
-| you | `<session>-master` |
+| you | your name as `ListAgents` gives it ("This session is …"). `conduct` names you `<session>-master`; a session that loaded this skill itself keeps its own name. Workers and reviewers message you by it. |
 | worker | `<slug>` (also its branch, its worktree's suffix and its window) |
 | reviewer | `<slug>-review` |
 | state | `~/.claude/conductor/<session>/` |
@@ -47,7 +50,9 @@ Names, all derived from the tmux session (`tmux display-message -p -t "$TMUX_PAN
 ## 1. Scope
 
 `conduct` starts you in plan mode: read anything, change nothing. Stay there
-until the user approves the plan.
+until the user approves the plan. If you loaded this skill in a session that
+isn't in plan mode, change nothing all the same, and take the user saying
+"begin" as the approval.
 
 Learn the repo first:
 
@@ -56,8 +61,22 @@ Learn the repo first:
   run in the main checkout. fulfil-io's `fulfil-worktree-flow` skill is an
   example: its venv and scripts are pinned to the main checkout, so it has a
   **run slot** (section 6).
-- The default branch: `git symbolic-ref --short refs/remotes/origin/HEAD`.
-- The merge methods: `gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`.
+- Where PRs go. `<repo>` is the repo PRs are opened against; in a clone of a
+  fork that's the parent, not the fork `origin` points at:
+
+  ```bash
+  gh repo view --json nameWithOwner,parent \
+    --jq 'if .parent then "\(.parent.owner.login)/\(.parent.name)" else .nameWithOwner end'
+  ```
+
+  `<remote>` is the remote whose URL is `<repo>` (`git remote -v`):
+  `upstream` in a fork clone (fulfil-io's `origin` is the user's fork, and its
+  develop is far behind), `origin` otherwise. If no remote points at `<repo>`,
+  ask the user. Everything below that starts from or rebases onto the default
+  branch uses `<remote>/<default>`, never the fork's copy, and every `gh`
+  command about a PR gets `--repo <repo>`.
+- The default branch: `gh repo view <repo> --json defaultBranchRef --jq .defaultBranchRef.name`.
+- The merge methods: `gh repo view <repo> --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed`.
   When rebase is the only one, every commit lands on the default branch as it
   is, so each PR stays **one commit** and fixes are amended into it.
 
@@ -83,18 +102,22 @@ Don't create anything before it.
 1. **Permission mode.** Workers and reviewers start in auto mode, and you must
    be in it too: a session holds cross-session messages from a session in
    another mode until its user approves each one. If you're not in auto mode
-   after the approval, ask the user to switch (shift+tab) and wait.
+   after the approval, ask the user to switch (shift+tab) and wait. Messages
+   arrive marked `from-mode="prompting"`; that is how an auto-mode sender
+   shows up, not a mismatch.
 2. **State.** In `~/.claude/conductor/<session>/` write:
    - `plan.md`: the approved plan
    - `briefs/<slug>.md`: one per piece, from `worker-brief.md` in this skill's
      directory, every `{{placeholder}}` filled and the variants not used
-     removed
+     removed. `{{repo}}` is `<repo>`. `{{head}}` is the slug when `origin` is
+     `<repo>`, and `<fork owner>:<slug>` in a fork clone, the owner from
+     `origin`'s URL (`alyosha31:<slug>` for fulfil-io)
    - `stack.json` (below)
 3. **Spawn** every piece whose parent is the default branch, from the main
    checkout:
 
    ```bash
-   ~/dev_config/bin/agent-spawn worker <session> <slug> origin/<default> ~/.claude/conductor/<session>/briefs/<slug>.md
+   ~/dev_config/bin/agent-spawn worker <session> <slug> <remote>/<default> ~/.claude/conductor/<session>/briefs/<slug>.md
    ```
 
    Add `--add-dir <main checkout>` when the repo has a run slot, so the worker
@@ -109,6 +132,8 @@ Don't create anything before it.
   "session": "po-receiving",
   "master": "po-receiving-master",
   "main": "/Users/mg/Development/fulfil/fulfil-io",
+  "repo": "fulfilio/fulfil-io",
+  "remote": "upstream",
   "default_branch": "develop",
   "one_commit_per_pr": true,
   "run_slot": true,
@@ -174,14 +199,14 @@ uncommitted work commits first. Go parent first, then its children, then
 theirs.
 
 ```bash
-git fetch origin
+git fetch <remote>
 git rebase --onto <new-base> "$(git merge-base --fork-point <parent> HEAD || git merge-base <parent> HEAD)"
 git push --force-with-lease
 ```
 
 - **The parent got new commits or was amended:** `<new-base>` is the parent's
   branch.
-- **The parent was merged:** `<new-base>` is `origin/<default>`, and the
+- **The parent was merged:** `<new-base>` is `<remote>/<default>`, and the
   child's `parent` in `stack.json` becomes the default branch.
 
 The child holds the parent's commit as it was when the child last rebased. If
@@ -214,10 +239,10 @@ Start it when every piece is pushed, CI is green, and every worker is idle.
 For each piece, all at once:
 
 1. Fill `review-brief.md` from this skill's directory into
-   `briefs/<slug>-review.md`. `{{base}}` is the parent's branch name: the
-   parent piece's slug, or the default branch.
+   `briefs/<slug>-review.md`. `{{base}}` is the parent's branch: the parent
+   piece's slug, or `<remote>/<default>`.
 2. The range is the piece's own commits: `<parent>..HEAD` for a stacked
-   piece, `origin/<default>..HEAD` otherwise. A stacked piece's PR also shows
+   piece, `<remote>/<default>..HEAD` otherwise. A stacked piece's PR also shows
    its parent's commits, but its reviewer shouldn't review them again.
 3. Spawn it:
 
@@ -245,11 +270,11 @@ Then rebase their children (section 5).
 The user merges, parent before child. When they say a piece is merged, or
 `gh pr view <n> --json state` shows it while you're checking status:
 
-1. Rebase its children onto `origin/<default>` (section 5).
+1. Rebase its children onto `<remote>/<default>` (section 5).
 2. Once they have pushed, clean up:
 
    ```bash
-   tmux kill-window -t <pane>
+   tmux kill-window -t <pane>        # and its <slug>-nvim / -tuicr windows, if open
    git -C <main> worktree remove <worktree>
    git -C <main> branch -D <slug>
    ```
@@ -258,6 +283,29 @@ The user merges, parent before child. When they say a piece is merged, or
    doesn't see the branch as merged. If `worktree remove` refuses, show the
    user `git -C <worktree> status --short` and ask before `--force`.
 3. Mark it `merged`. When every piece is merged, say so.
+
+## 9. Opening nvim or tuicr for the user
+
+When the user wants to look for themselves ("open nvim on the api piece",
+"tuicr on the ui one", "take me to the worker"), work out which piece they
+mean from the conversation and `stack.json`, and ask if it could be more than
+one.
+
+```bash
+~/dev_config/bin/agent-spawn open <session> <slug>-nvim <worktree> nvim
+~/dev_config/bin/agent-spawn open <session> <slug>-tuicr <worktree> tuicr -r <range> -w
+```
+
+- **nvim**: open a file when they're asking about one: `nvim +<line> <path>`.
+- **tuicr**: `<range>` is the piece's own commits, as in section 7; `-w` adds
+  what the worker hasn't committed yet. Once the review round has put tuicr
+  in the piece's window, take them to that pane instead of opening a second
+  tuicr on the same review:
+  `tmux select-window -t <tuicr_pane> && tmux select-pane -t <tuicr_pane>`.
+- **Taking them to a window**: `tmux select-window -t <pane>`.
+
+`open` switches the session to the window, and goes back to the one already
+open if they ask twice. Tell them the window's name.
 
 ## After a compaction or restart
 
