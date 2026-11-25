@@ -1,6 +1,6 @@
 ---
 name: review-conductor
-description: Be the review master of a tmux session — for each PR the user gives you (here, or from claude.ai or the Claude app over Remote Control), start a reviewer Claude in the PR's worktree and its own tmux window (review-pr on top, tuicr below), then keep track of every review while the user carries each one on with its reviewer directly; report where things stand and clean up when asked. Use when `conduct --reviews` started you, or when asked to start or keep track of reviews of several PRs across tmux windows.
+description: Be the review master of a tmux session — for each PR the user gives you (here, or from claude.ai or the Claude app over Remote Control), start a reviewer Claude in the PR's worktree and its own tmux window (review-pr on top, tuicr below), then keep track of every review while the user carries each one on with its reviewer directly; report where things stand and clean up when asked. Also reviews a conductor's finished pieces, a reviewer in each worker's window. Use when `conduct --reviews` or a conductor started you, or when asked to start or keep track of reviews of several PRs across tmux windows.
 ---
 
 # Review conductor
@@ -12,6 +12,10 @@ window, that runs review-pr and leaves its findings as drafts in tuicr. From
 then on the user works with that reviewer directly, in its window, and you
 keep track of where every review stands, so you can answer "what's up" from
 anywhere.
+
+A conductor can start you too, in its session's `reviews` window, to review
+the pieces its workers built. Then section 7 says what changes: mostly, the
+reviewers go in the workers' windows.
 
 ```
 window 0   you                   cwd: the folder the checkouts are under
@@ -46,7 +50,7 @@ window 1+  one per PR            ┌──────────────�
 
 | | |
 |---|---|
-| you | your name as `ListAgents` gives it ("This session is …"). `conduct --reviews` names you `<session>-master`; a session that loaded this skill itself keeps its own name. Reviewers message you by it. |
+| you | your name as `ListAgents` gives it ("This session is …"). `conduct --reviews` names you `<session>-master`, a conductor `<session>-reviews`; a session that loaded this skill itself keeps its own name. Reviewers message you by it. |
 | session | your tmux session: `tmux display-message -p -t "$TMUX_PANE" '#S'`. If `$TMUX_PANE` is empty you aren't in tmux and can't open windows: say so and stop. |
 | window | `<repo>-<N>`, `<repo>` being the checkout's folder name (`fulfil-io-23810`) |
 | reviewer | `<repo>-<N>-review` |
@@ -56,9 +60,10 @@ You and the reviewers run in auto mode: a session holds messages from a
 session in another permission mode until its user approves each one. If you
 aren't in auto mode, ask the user to switch (shift+tab) before starting a
 review. Messages arrive marked `from-mode="prompting"`; that is how an
-auto-mode sender shows up, not a mismatch. `conduct --reviews` also starts you with Remote Control on; in a
-session that loaded this skill itself, the user turns it on with
-`/remote-control` if they want to reach you from claude.ai or the app.
+auto-mode sender shows up, not a mismatch. `conduct --reviews` and a
+conductor also start you with Remote Control on; in a session that loaded
+this skill itself, the user turns it on with `/remote-control` if they want
+to reach you from claude.ai or the app.
 
 ## 1. Start a review
 
@@ -237,6 +242,57 @@ open if they ask twice. Tell them the window's name. None of this helps over
 Remote Control: if they're away from the desk, say it'll be there when
 they're back.
 
+## 7. Reviewing a conductor's pieces
+
+A conductor starts you in its session's `reviews` window once its workers'
+pieces are pushed and green and the user asks for reviews. Your brief names
+the conductor, its `stack.json` and `plan.md`, and the pieces to review. This
+is the user's own work, so nothing gets posted: the worker fixes what the
+drafts find, with /address-review. Sections 2, 3 and 6 hold, with these
+differences:
+
+- **Where.** The reviewer goes in the worker's own window: worker top-left,
+  reviewer top-right, tuicr across the bottom. The piece's worker pane,
+  worktree and parent are in `stack.json`, which is the conductor's: read it,
+  never change it.
+
+  ```bash
+  ~/dev_config/bin/agent-spawn review <worker pane> <worktree> <range> ~/.claude/conductor/<session>/briefs/<slug>-review.md
+  ```
+
+- **What.** Only the piece's own commits. `<range>` is `<parent>..HEAD` for a
+  piece stacked on another, `<remote>/<default>..HEAD` otherwise (`remote`
+  and `default_branch` are in `stack.json`). A stacked piece's PR also shows
+  its parent's commits, and those have their own reviewer.
+- **The brief** is `piece-brief.md` in this skill's directory. `{{base}}` is
+  the parent piece's slug, or `<remote>/<default>`; `{{goal}}` and `{{owns}}`
+  come from `plan.md`; `{{conductor}}` is the conductor's name.
+- **Names.** The reviewer is `<slug>-review`, and its messages name the piece
+  by its slug where a PR reviewer's name `<repo>#<N>`.
+- **`reviews.json`** keys these by slug, with `"piece": true`, the worker's
+  `pane`, `review_pane`, `tuicr_pane` and `range` in place of `repo`, `pr`
+  and `created`. `status` moves through `reviewing`, `reviewed`,
+  `addressing`, `dropped`.
+- **When every reviewer has reported,** tell the user, with the drafts per
+  piece: they're in each worker window's tuicr pane, to delete, reword or add
+  to. Then they say "go", for every piece or the ones they name.
+- **Go** isn't yours to carry out: workers take instructions only from the
+  conductor. Pass it on with SendMessage, first line `go <slug> <slug> …` or
+  `go all`, and mark those pieces `addressing`. The conductor has the workers
+  run /address-review and push.
+- **Re-review**, when the user asks for one after a worker pushed its fixes:
+  send the reviewer "From the user: the worker has pushed its fixes.
+  Re-review, as your brief says."
+- **Where things stand**, per piece: as section 3, with the piece's local
+  review in place of GitHub. Its drafts are in the active row of
+  `tuicr review list --repo <worktree>` anchored on the slug; the piece's
+  `status` and PR are in `stack.json`.
+- **Cleanup.** When the user says a piece's review is done, or `stack.json`
+  shows it merged, close its reviewer and tuicr with
+  `tmux kill-pane -t <review_pane>` and `tmux kill-pane -t <tuicr_pane>`, and
+  drop it from `reviews.json`. Never close the worker's pane or window: they're
+  the conductor's.
+
 ## After a compaction or restart
 
 Read `reviews.json` again, then `ListAgents` to see which reviewers are still
@@ -249,4 +305,5 @@ tuicr_pane=$(tmux split-window -d -v -f -l 50% -P -F '#{pane_id}' -t "$pane" -c 
 tmux send-keys -t "$tuicr_pane" "tuicr pr <N>" C-m
 ```
 
-and record its new panes.
+and record its new panes. For a piece's reviewer, split the worker's window
+instead, as `agent-spawn review` does, and resume it there the same way.

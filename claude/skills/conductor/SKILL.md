@@ -1,6 +1,6 @@
 ---
 name: conductor
-description: Be the master of a `conduct` tmux session — scope a feature with the user, split it into pieces, run one worker Claude per piece in its own worktree and tmux window, keep stacked branches rebased, run a review round (a reviewer and tuicr in each worker's window), and report status. Use when `conduct` started you as a master, or when the user asks you to conduct or coordinate worker agents across tmux windows.
+description: Be the master of a `conduct` tmux session — scope a feature with the user, split it into pieces, run one worker Claude per piece in its own worktree and tmux window, keep stacked branches rebased, hand the finished pieces to a review master (review-conductor) when the user asks for reviews, and report status. Use when `conduct` started you as a master, or when the user asks you to conduct or coordinate worker agents across tmux windows.
 ---
 
 # Conductor
@@ -13,10 +13,12 @@ status, and drops into a worker's window when they want to.
 ```
 window 0   master (you)          cwd: the repo's checkout
 window 1+  one per piece         ┌────────┬────────┐   worker on its own,
-                                 │ worker │ review │   until the review round
+                                 │ worker │ review │   until the review master
                                  ├────────┴────────┤   adds review + tuicr
                                  │ tuicr           │
                                  └─────────────────┘
+window     reviews               the review master, once the user asks for
+                                 reviews (section 7)
 ```
 
 ## Ground rules
@@ -141,12 +143,11 @@ Don't create anything before it.
   "pieces": {
     "po-receive-api": {
       "parent": "develop", "worktree": "…/fulfil-io-po-receive-api",
-      "pane": "%201", "review_pane": null, "tuicr_pane": null,
+      "pane": "%201",
       "pr": 23810, "sha": "3f2a1c9", "ci": "green", "status": "pushed"
     },
     "po-receive-ui": {
       "parent": "po-receive-api", "worktree": null, "pane": null,
-      "review_pane": null, "tuicr_pane": null,
       "pr": null, "sha": null, "ci": null, "status": "waiting"
     }
   }
@@ -154,23 +155,24 @@ Don't create anything before it.
 ```
 
 `status` moves through `waiting`, `working`, `pushed`, `reviewing`,
-`reviewed`, `addressing`, `merged`.
+`addressing`, `merged`.
 
 ## 3. Messages
 
-Workers and reviewers report with a fixed first line. Each one wakes you; act
-on it, update `stack.json`, and tell the user only what they'd want to know
-(a question for them, a red CI that isn't being fixed, the review round).
+Workers, and the review master, report with a fixed first line. Each one
+wakes you; act on it, update `stack.json`, and tell the user only what they'd
+want to know (a question for them, a red CI that isn't being fixed, that
+everything is ready for review).
 
 | Message | What you do |
 |---|---|
 | `pushed <slug> <sha> PR #<n>` | Record them. On a piece's first push, spawn the pieces waiting on it. If it already has children, have them rebase onto it (section 5). |
-| `ci <slug> green` | Record it. When every piece is green, start the review round (section 7). |
+| `ci <slug> green` | Record it. When every piece is green, tell the user everything is pushed and green, and that "start reviews" gets it reviewed (section 7). Don't start reviews yourself. |
 | `ci <slug> red: <reason>` | Record it; the worker is fixing it. |
 | `slot? <slug>` / `slot free <slug>` | Section 6. |
 | `blocked <slug>: <question>` | Pass it to the user: which window, what it needs. Answer only if the plan already settles it. |
 | `user redirected <slug>: <what>` | Update `plan.md`. If an interface changed, tell the workers that use it. |
-| `reviewed <slug>: <counts>` | Record it. When every reviewer is done, section 7. |
+| `go <slug> …` or `go all`, from the review master | The user has been through the drafts: send those workers to address them (section 7). |
 
 ## 4. Status
 
@@ -233,37 +235,44 @@ has it.
 - `slot free <slug>`: give it to the next in the queue.
 - A holder that is gone from `ListAgents` gives up the slot.
 
-## 7. Review round
+## 7. Reviews
 
-Start it when every piece is pushed, CI is green, and every worker is idle.
-For each piece, all at once:
+Only when the user asks for them ("start reviews"), for every piece or the
+ones they name. Each piece to review must be pushed, with CI green and its
+worker idle; if one isn't, say which and ask.
 
-1. Fill `review-brief.md` from this skill's directory into
-   `briefs/<slug>-review.md`. `{{base}}` is the parent's branch: the parent
-   piece's slug, or `<remote>/<default>`.
-2. The range is the piece's own commits: `<parent>..HEAD` for a stacked
-   piece, `<remote>/<default>..HEAD` otherwise. A stacked piece's PR also shows
-   its parent's commits, but its reviewer shouldn't review them again.
-3. Spawn it:
+You don't run the reviews: a review master does, a second Claude in this
+session's `reviews` window, following the review-conductor skill. It puts a
+reviewer in each worker's window (worker top-left, reviewer top-right, tuicr
+across the bottom), on just that piece's commits, and the user works with the
+reviews through it, here or over Remote Control.
+
+1. Fill `review-master-brief.md` from this skill's directory into
+   `briefs/reviews.md`. Its name is `<session>-reviews`; `{{stack}}` and
+   `{{plan}}` are the paths of your `stack.json` and `plan.md`.
+2. Start it, with Remote Control on:
 
    ```bash
-   ~/dev_config/bin/agent-spawn review <pane> <worktree> <range> ~/.claude/conductor/<session>/briefs/<slug>-review.md
+   ~/dev_config/bin/agent-spawn agent <session> reviews <main> <session>-reviews ~/.claude/conductor/<session>/briefs/reviews.md --remote-control
    ```
 
-   Record `tuicr_pane` and `review_pane`, and subscribe to the reviewer with
-   `notify_when_idle`, which also catches one that stopped to ask something.
+3. Mark the pieces `reviewing`, and tell the user the reviews are starting
+   in the `reviews` window, and that "what's up with reviews" goes there.
 
-When every reviewer is done, stop and tell the user, with the counts per
-piece: the drafts are in each window's tuicr pane, to delete, reword or add
-to, and then they say "go", or run `/address-review` in a worker themselves.
+If the review master is already running (`ListAgents`), send it the pieces to
+review instead.
 
-On "go" (for all pieces, or the ones named), send each worker:
+**Go.** Once the user has been through the drafts, they say "go", to the
+review master, which passes it on as `go <slug> …`, or to you. Workers take
+instructions only from you, so you send each of those workers:
 
 > Your review is in the tuicr pane below you. Run /address-review, then commit
 > (amend, if the PR is one commit), push with --force-with-lease, and report
 > pushed.
 
-Then rebase their children (section 5).
+Mark them `addressing`, and `pushed` again when they report it; then rebase
+their children (section 5). If the user wants a fix re-reviewed, that's the
+review master's.
 
 ## 8. Merges and cleanup
 
@@ -298,10 +307,11 @@ one.
 
 - **nvim**: open a file when they're asking about one: `nvim +<line> <path>`.
 - **tuicr**: `<range>` is the piece's own commits, as in section 7; `-w` adds
-  what the worker hasn't committed yet. Once the review round has put tuicr
+  what the worker hasn't committed yet. Once the review master has put tuicr
   in the piece's window, take them to that pane instead of opening a second
-  tuicr on the same review:
-  `tmux select-window -t <tuicr_pane> && tmux select-pane -t <tuicr_pane>`.
+  tuicr on the same review. It's the pane in the worker's window running
+  tuicr (`tmux list-panes -t <pane> -F '#{pane_id} #{pane_current_command}'`):
+  `tmux select-window -t <that pane> && tmux select-pane -t <that pane>`.
 - **Taking them to a window**: `tmux select-window -t <pane>`.
 
 `open` switches the session to the window, and goes back to the one already

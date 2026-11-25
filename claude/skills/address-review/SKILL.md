@@ -59,8 +59,9 @@ Each comment has:
   about the change as a whole
 - `side`: `new` is the line in the changed file; `old` is a line the change
   removed
-- `comment_type`: `issue` must be fixed, `suggestion` should be, `nit` is
-  optional, `question` wants an answer, `praise` needs nothing
+- `comment_type`: usually `none`, since drafts are added without one. If a
+  comment does have a type (`issue`, `suggestion`, `nit`, `question`,
+  `praise`), take it as a hint; the comment's words are what count
 - `author`: `Claude` is the review agent's draft; anything else is the
   reviewer's own
 - `content`: the comment
@@ -75,7 +76,8 @@ Their own comments carry the most weight.
 
 ## 3. Work through them
 
-Go issues first, then suggestions, questions and nits; skip praise.
+Go by how much each comment matters, judged from what it says: anything that
+would break or give a wrong result first, then the rest. Praise needs nothing.
 
 - Check the claim against the code before changing anything. A comment can be
   wrong: one that doesn't hold gets an explanation, not a change.
@@ -91,26 +93,25 @@ Go issues first, then suggestions, questions and nits; skip praise.
 
 ## 4. Report
 
-One entry per comment, grouped by outcome, each with where it points, its type,
-the gist of the comment, and what you did:
+One entry per comment, grouped by outcome, each with where it points, the gist
+of the comment, and what you did:
 
 ```
 ### Fixed
-- src/orders/checkout.py:212 [issue] empty address on pickup orders →
-  skipped the shipping quote for pickup orders, with a test for it
-- review [suggestion] add a test for `b()` → added test_b_returns_three
+- src/orders/checkout.py:212 empty address on pickup orders → skipped the
+  shipping quote for pickup orders, with a test for it
+- review: add a test for `b()` → added test_b_returns_three
 
 ### Not changed
-- src/orders/checkout.py:240 [nit] rename `qty` → kept: every caller and the
-  API payload use `qty`
+- src/orders/checkout.py:240 rename `qty` → kept: every caller and the API
+  payload use `qty`
 
 ### Answered
-- src/orders/models.py:1 [question] what uses `x`? → the export job in
-  jobs/export.py:58
+- src/orders/models.py:1 what uses `x`? → the export job in jobs/export.py:58
 
 ### Needs you
-- src/orders/pricing.py:30 [suggestion] move rounding into the model → a
-  bigger change than this fix; want it here or separately?
+- src/orders/pricing.py:30 move rounding into the model → a bigger change
+  than this fix; want it here or separately?
 ```
 
 End with what changed on disk (`git diff --stat`) and the tests you ran. The

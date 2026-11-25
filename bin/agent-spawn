@@ -31,6 +31,12 @@
 #           │ tuicr pr …#N        │
 #           └─────────────────────┘
 #
+#   agent-spawn agent <session> <window> <dir> <name> <brief-file> [--remote-control]
+#       Another agent that coordinates rather than works on a branch, such
+#       as the conductor's review master: window <window> in <session>,
+#       `claude -n <name>` in <dir> with the brief, and with Remote Control
+#       on if asked.
+#
 #   agent-spawn open <session> <name> <dir> <command> [args...]
 #       For the user: a window <name> in <session> running <command> in
 #       <dir> (nvim, tuicr), and switches the session to it. If a window
@@ -62,12 +68,13 @@ brief_path() {
 # The command typed into a new pane. The pane's shell expands "$(cat brief)",
 # so the brief becomes the agent's first message word for word, with no
 # quoting to get wrong and no file for the agent to ask permission to read.
+#   claude_cmd <name> <brief> [option...]   options go in as given, each quoted
 claude_cmd() {
     local name=$1 brief=$2
     shift 2
-    local cmd="claude -n $(printf %q "$name") --permission-mode $(printf %q "$mode")"
-    for dir in "$@"; do
-        cmd+=" --add-dir $(printf %q "$dir")"
+    local cmd="claude -n $(printf %q "$name") --permission-mode $(printf %q "$mode")" arg
+    for arg in "$@"; do
+        cmd+=" $(printf %q "$arg")"
     done
     # `--` ends the options: --add-dir takes any number of directories, and
     # without it the brief would be read as one more.
@@ -101,10 +108,10 @@ worker() {
     local session=$1 slug=$2 base=$3 brief
     brief=$(brief_path "$4")
     shift 4
-    local add_dirs=()
+    local opts=()
     while [ $# -gt 0 ]; do
         case $1 in
-            --add-dir) [ $# -ge 2 ] || die "--add-dir needs a directory"; add_dirs+=("$2"); shift 2 ;;
+            --add-dir) [ $# -ge 2 ] || die "--add-dir needs a directory"; opts+=(--add-dir "$2"); shift 2 ;;
             *) die "unknown option $1" ;;
         esac
     done
@@ -138,7 +145,7 @@ worker() {
     pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$session:" -n "$slug" -c "$wt")
     # Typed into a shell rather than run as the window's command, so the
     # window stays open at a prompt if Claude exits.
-    tmux send-keys -t "$pane" "$(claude_cmd "$slug" "$brief" ${add_dirs[@]+"${add_dirs[@]}"})" C-m
+    tmux send-keys -t "$pane" "$(claude_cmd "$slug" "$brief" ${opts[@]+"${opts[@]}"})" C-m
 
     echo "worktree=$wt"
     echo "pane=$pane"
@@ -256,6 +263,31 @@ pr_review() {
     echo "tuicr_pane=$tuicr_pane"
 }
 
+agent() {
+    [ $# -ge 5 ] || die "usage: agent-spawn agent <session> <window> <dir> <name> <brief-file> [--remote-control]"
+    local session=$1 window=$2 dir=$3 name=$4 brief
+    brief=$(brief_path "$5")
+    shift 5
+    local opts=()
+    while [ $# -gt 0 ]; do
+        case $1 in
+            # Named, or --remote-control would take the next word as its name.
+            --remote-control) opts+=(--remote-control "$name"); shift ;;
+            *) die "unknown option $1" ;;
+        esac
+    done
+    tmux has-session -t "=$session" 2>/dev/null || die "no tmux session $session"
+    [ -d "$dir" ] || die "no directory $dir"
+    if tmux list-windows -t "=$session" -F '#{window_name}' | grep -qxF "$window"; then
+        die "window $window is already open in $session"
+    fi
+
+    local pane
+    pane=$(tmux new-window -d -P -F '#{pane_id}' -t "=$session:" -n "$window" -c "$dir")
+    tmux send-keys -t "$pane" "$(claude_cmd "$name" "$brief" ${opts[@]+"${opts[@]}"})" C-m
+    echo "pane=$pane"
+}
+
 open_window() {
     [ $# -ge 4 ] || die "usage: agent-spawn open <session> <name> <dir> <command> [args...]"
     local session=$1 name=$2 dir=$3
@@ -290,6 +322,7 @@ case ${1:-} in
     worker) shift; worker "$@" ;;
     review) shift; review "$@" ;;
     pr-review) shift; pr_review "$@" ;;
+    agent) shift; agent "$@" ;;
     open) shift; open_window "$@" ;;
-    *) die "usage: agent-spawn worker|review|pr-review|open ... (see the comment at the top of $0)" ;;
+    *) die "usage: agent-spawn worker|review|pr-review|agent|open ... (see the comment at the top of $0)" ;;
 esac

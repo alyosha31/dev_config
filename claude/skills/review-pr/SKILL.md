@@ -278,7 +278,7 @@ behind it stays out.
 
 ```bash
 tuicr review add --session <slug> --input - <<'JSON'
-{"username": "Claude", "type": "issue", "file": "src/orders/checkout.py", "line": 212,
+{"username": "Claude", "file": "src/orders/checkout.py", "line": 212,
  "content": "can you check what happens here for pickup orders, i think `order.address` is empty for those so this would raise"}
 JSON
 ```
@@ -286,9 +286,9 @@ JSON
 - JSON on stdin under a quoted heredoc: comments hold backticks and quotes
   that a shell argument would mangle or run
 - `username` is always `Claude`, so the reviewer can tell drafts from their own
-- `type` says how much it matters, whatever the wording: `issue` for must fix,
-  `suggestion` for should fix, `nit` for nit, and `question` when you don't
-  know and nothing may be wrong
+- never a `type`: leave it out, so the draft has none and goes to GitHub just
+  as written, with no `[NIT]`, `[QUESTION]` or other prefix. How much a
+  finding matters shows in its wording, and in the hand-over (section 6)
 - line numbers are new-file lines (in local mode, the file as it is on disk),
   from the `+c,d` side of the hunk header. A range takes `start_line` and
   `end_line` instead of `line`; a removed line takes its old line number and
@@ -325,8 +325,9 @@ was left alone, and anything the code or PR shows they considered and dropped.
 Skipped: package-lock.json (generated)
 
 ### In tuicr
-5 drafts from Claude: 1 issue, 3 questions, 1 nit. Keep, rewrite (`i`) or
-delete (`dd`) each one; whatever you `:submit` posts under your name.
+5 drafts from Claude. The one that has to be fixed: src/orders/checkout.py:212.
+Keep, rewrite (`i`) or delete (`dd`) each one; whatever you `:submit` posts
+under your name.
 ```
 
 In local mode the header is the branch instead, and the drafts go back to the
@@ -337,9 +338,9 @@ agent rather than to GitHub:
 3 commits + uncommitted changes · +A −D across F files · <ticket, if any>
 ...
 ### In tuicr
-5 drafts from Claude: 1 issue, 3 questions, 1 nit. Keep, rewrite (`i`) or
-delete (`dd`) each one, then run `/address-review` in the agent that made the
-change to work through what's left.
+5 drafts from Claude. The one that has to be fixed: src/orders/checkout.py:212.
+Keep, rewrite (`i`) or delete (`dd`) each one, then run `/address-review` in
+the agent that made the change to work through what's left.
 ```
 
 - "Read these yourself" holds the files that need human judgement, most
